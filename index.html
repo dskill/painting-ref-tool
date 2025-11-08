@@ -94,6 +94,9 @@
         <button id="liveScanBtn" disabled>
           📷 Live Camera (Painting)
         </button>
+        <button id="fullscreenCompareBtn" disabled>
+          🔍 Fullscreen Compare
+        </button>
       </div>
       <div>
         <input style="display:none;" type="file" id="referenceFile" onchange="loadReferenceFromFile();" accept=".jpg,.jpeg,.png,.bmp" />
@@ -119,6 +122,17 @@
       </div>
       <div>
         <div id="captureViewer" class="fullscreen"></div>
+        <div id="comparisonViewer" class="fullscreen" style="display: none;">
+          <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000;">
+            <img id="comparisonImage" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            <div id="comparisonHint" style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 1rem 2rem; border-radius: 8px; font-size: 1.1rem; pointer-events: none;">
+              Hold to see reference • Release to see painting
+            </div>
+            <button id="exitComparisonBtn" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 1rem; cursor: pointer; z-index: 10;">
+              ✕ Exit
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <script type="text/javascript">
@@ -127,6 +141,13 @@
       let docManager;
       let doc;
       let detectHander;
+
+      // State tracking for fullscreen comparison
+      let hasReference = false;
+      let hasPainting = false;
+      let referenceImageData = null;
+      let paintingImageData = null;
+
       initDDV();
 
       var Module = {
@@ -200,6 +221,125 @@
         }
       })
 
+      // Fullscreen comparison mode
+      document.getElementById("fullscreenCompareBtn").addEventListener("click", function(){
+        const viewer = document.getElementById("comparisonViewer");
+        const img = document.getElementById("comparisonImage");
+
+        // Calculate the optimal display size based on viewport
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Load both images to get their dimensions
+        const refImg = new Image();
+        const paintImg = new Image();
+
+        let loadCount = 0;
+
+        function bothLoaded() {
+          loadCount++;
+          if (loadCount === 2) {
+            // Use the painting's aspect ratio (it's the corrected one)
+            const paintingAspect = paintImg.width / paintImg.height;
+
+            // Calculate display size to fit viewport while maintaining aspect ratio
+            let displayWidth = viewportWidth * 0.95;
+            let displayHeight = displayWidth / paintingAspect;
+
+            if (displayHeight > viewportHeight * 0.9) {
+              displayHeight = viewportHeight * 0.9;
+              displayWidth = displayHeight * paintingAspect;
+            }
+
+            // Set explicit size on the comparison image
+            img.style.width = displayWidth + 'px';
+            img.style.height = displayHeight + 'px';
+            img.style.objectFit = 'fill'; // Force both to fill the same dimensions
+
+            // Start with painting
+            img.src = paintingImageData;
+
+            // Show fullscreen
+            viewer.style.display = "block";
+          }
+        }
+
+        refImg.onload = bothLoaded;
+        paintImg.onload = bothLoaded;
+        refImg.src = referenceImageData;
+        paintImg.src = paintingImageData;
+      });
+
+      // Exit comparison mode
+      document.getElementById("exitComparisonBtn").addEventListener("click", function(e){
+        e.stopPropagation();
+        document.getElementById("comparisonViewer").style.display = "none";
+      });
+
+      // Prevent exit button from triggering comparison events
+      document.getElementById("exitComparisonBtn").addEventListener("mousedown", function(e){
+        e.stopPropagation();
+      });
+
+      document.getElementById("exitComparisonBtn").addEventListener("mouseup", function(e){
+        e.stopPropagation();
+      });
+
+      document.getElementById("exitComparisonBtn").addEventListener("touchstart", function(e){
+        e.stopPropagation();
+      });
+
+      document.getElementById("exitComparisonBtn").addEventListener("touchend", function(e){
+        e.stopPropagation();
+      });
+
+      // ESC key to exit
+      document.addEventListener("keydown", function(e){
+        if (e.key === "Escape") {
+          const viewer = document.getElementById("comparisonViewer");
+          if (viewer.style.display === "block") {
+            viewer.style.display = "none";
+          }
+        }
+      });
+
+      // Touch and mouse events for comparison
+      const comparisonViewer = document.getElementById("comparisonViewer");
+      const comparisonImage = document.getElementById("comparisonImage");
+
+      function showReference() {
+        comparisonImage.src = referenceImageData;
+      }
+
+      function showPainting() {
+        comparisonImage.src = paintingImageData;
+      }
+
+      // Touch events
+      comparisonViewer.addEventListener("touchstart", function(e){
+        e.preventDefault();
+        showReference();
+      });
+
+      comparisonViewer.addEventListener("touchend", function(e){
+        e.preventDefault();
+        showPainting();
+      });
+
+      // Mouse events
+      comparisonViewer.addEventListener("mousedown", function(e){
+        showReference();
+      });
+
+      comparisonViewer.addEventListener("mouseup", function(e){
+        showPainting();
+      });
+
+      // Also handle when mouse leaves while holding
+      comparisonViewer.addEventListener("mouseleave", function(e){
+        showPainting();
+      });
+
       function getCroppedImage(points){
         // If no points provided, detect them first with proper options
         if (!points) {
@@ -207,7 +347,22 @@
         }
         console.log("Detected corners:", points);
         let canvas = documentScanner.crop(document.getElementById("photoRaw"), points);
-        document.getElementById("output").src = canvas.toDataURL();
+        const dataURL = canvas.toDataURL();
+        document.getElementById("output").src = dataURL;
+
+        // Store painting data and update state
+        paintingImageData = dataURL;
+        hasPainting = true;
+        checkEnableComparisonButton();
+      }
+
+      function checkEnableComparisonButton() {
+        const btn = document.getElementById("fullscreenCompareBtn");
+        if (hasReference && hasPainting) {
+          btn.disabled = false;
+        } else {
+          btn.disabled = true;
+        }
       }
 
       async function loadImage(img,src) {
@@ -244,6 +399,11 @@
 
             // Display the reference photo
             document.getElementById("photo").src = e.target.result;
+
+            // Store reference data and update state
+            referenceImageData = e.target.result;
+            hasReference = true;
+            checkEnableComparisonButton();
           };
           img.src = e.target.result;
         };
