@@ -126,7 +126,7 @@
           <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000;">
             <img id="comparisonImage" style="max-width: 100%; max-height: 100%; object-fit: contain;">
             <div id="comparisonHint" style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 1rem 2rem; border-radius: 8px; font-size: 1.1rem; pointer-events: none;">
-              Hold to see reference • Release to see painting
+              Hold to see painting • Release to see reference
             </div>
             <button id="exitComparisonBtn" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 1rem; cursor: pointer; z-index: 10;">
               ✕ Exit
@@ -256,8 +256,8 @@
             img.style.height = displayHeight + 'px';
             img.style.objectFit = 'fill'; // Force both to fill the same dimensions
 
-            // Start with painting
-            img.src = paintingImageData;
+            // Start with reference
+            img.src = referenceImageData;
 
             // Show fullscreen
             viewer.style.display = "block";
@@ -315,29 +315,29 @@
         comparisonImage.src = paintingImageData;
       }
 
-      // Touch events
+      // Touch events - press to show painting, release to show reference
       comparisonViewer.addEventListener("touchstart", function(e){
         e.preventDefault();
-        showReference();
+        showPainting();
       });
 
       comparisonViewer.addEventListener("touchend", function(e){
         e.preventDefault();
-        showPainting();
-      });
-
-      // Mouse events
-      comparisonViewer.addEventListener("mousedown", function(e){
         showReference();
       });
 
-      comparisonViewer.addEventListener("mouseup", function(e){
+      // Mouse events - press to show painting, release to show reference
+      comparisonViewer.addEventListener("mousedown", function(e){
         showPainting();
+      });
+
+      comparisonViewer.addEventListener("mouseup", function(e){
+        showReference();
       });
 
       // Also handle when mouse leaves while holding
       comparisonViewer.addEventListener("mouseleave", function(e){
-        showPainting();
+        showReference();
       });
 
       function getCroppedImage(points){
