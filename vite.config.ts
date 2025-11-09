@@ -1,10 +1,11 @@
 // vite.config.ts
-import { resolve } from 'path';
 import { defineConfig } from 'vite';
-import dts from 'vite-plugin-dts';
 import fs from 'fs';
-// https://vitejs.dev/guide/build.html#library-mode
+
 export default defineConfig({
+  // Set base path for GitHub Pages deployment
+  // This will be /painting-ref-tool/ when deployed to GitHub Pages
+  base: process.env.NODE_ENV === 'production' ? '/painting-ref-tool/' : '/',
   server: {
     host: true,
     https: {
@@ -13,13 +14,8 @@ export default defineConfig({
     },
   },
   build: {
-    lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'opencv-document-scanner',
-      fileName: 'opencv-document-scanner',
-    },
+    outDir: 'dist',
+    // Generate sourcemaps for debugging
+    sourcemap: true,
   },
-  plugins: [
-    dts()
-  ],
 });

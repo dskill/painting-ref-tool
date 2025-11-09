@@ -42,7 +42,7 @@
   ],
   "scripts": {
     "dev": "ncp node_modules/dynamsoft-document-viewer/dist public/dynamsoft-document-viewer && vite --host",
-    "build": "tsc && vite build && rimraf dist/opencv.js && rimraf dist/dynamsoft-document-viewer",
+    "build": "ncp node_modules/dynamsoft-document-viewer/dist public/dynamsoft-document-viewer && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
