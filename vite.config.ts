@@ -2,16 +2,21 @@
 import { defineConfig } from 'vite';
 import fs from 'fs';
 
+// Only load HTTPS certificates if they exist (for local development)
+const httpsConfig = fs.existsSync('./localhost-key.pem') && fs.existsSync('./localhost.pem')
+  ? {
+      key: fs.readFileSync('./localhost-key.pem'),
+      cert: fs.readFileSync('./localhost.pem'),
+    }
+  : undefined;
+
 export default defineConfig({
   // Set base path for GitHub Pages deployment
   // This will be /painting-ref-tool/ when deployed to GitHub Pages
   base: process.env.NODE_ENV === 'production' ? '/painting-ref-tool/' : '/',
   server: {
     host: true,
-    https: {
-      key: fs.readFileSync('./localhost-key.pem'),
-      cert: fs.readFileSync('./localhost.pem'),
-    },
+    https: httpsConfig,
   },
   build: {
     outDir: 'dist',
