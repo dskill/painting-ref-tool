@@ -1,102 +1,133 @@
-# opencvjs-document-scanner
+# Watercolor Painting Alignment Reference Tool
 
-![version](https://img.shields.io/npm/v/opencv-document-scanner.svg)
-![downloads](https://img.shields.io/npm/dm/opencv-document-scanner.svg)
-![jsdelivr](https://img.shields.io/jsdelivr/npm/hm/opencv-document-scanner.svg)
+A web-based tool that helps artists compare their watercolor paintings with reference photos during the artistic process. Uses OpenCV.js for automatic border detection and perspective correction, with an interactive fullscreen comparison mode.
 
-> This project was started from [opencvjs-document-scanner](https://github.com/tony-xlh/opencvjs-document-scanner)
+**[Try it now](https://dskill.github.io/painting-ref-tool/)**
 
-A document scanner implemented with opencv.js. It can detect the boundaries of documents and apply perspective transformation to get a deskewed image.
+> This project was started from [opencvjs-document-scanner](https://github.com/tony-xlh/opencvjs-document-scanner) but has been completely transformed for artist reference alignment workflows.
 
-[Online demo](https://tony-xlh.github.io/opencvjs-document-scanner/example/vanilla.html)
+## Features
 
-[Demo video](https://github.com/tony-xlh/opencvjs-document-scanner/assets/5462205/0f1748fc-1e19-462f-9928-c9efde0863ad)
+- **Dual Image Workflows**: Upload separate reference photo and painting photo
+- **Automatic Border Detection**: Uses OpenCV.js to detect rectangular borders (pencil sketches) on both images
+- **Perspective Correction**: Automatically deskews and crops detected painting borders
+- **Interactive Fullscreen Comparison**:
+  - Press/hold to toggle between reference and painting
+  - Fine-tune alignment with rotation, scale, and position controls
+  - Adjust opacity to blend/compare images
+- **Live Camera Capture**: Use device camera to photograph your painting with real-time border detection
+- **Mobile Optimized**: Touch gestures for pan, pinch-to-zoom, and image comparison
+- **Persistent Alignment**: Saves transform settings when switching between different paintings
 
-Example:
+## How It Works
 
-![example](https://github.com/tony-xlh/opencvjs-document-scanner/assets/5462205/dba83ab0-75bd-4685-a462-ef61fb21629d)
+1. **Upload a reference photo** - The image you're using as inspiration
+2. **Upload or capture a painting photo** - Your work-in-progress painting
+3. **Automatic detection** - The app detects borders and applies perspective correction
+4. **Fullscreen comparison** - Press/hold anywhere to toggle between reference and painting
+5. **Fine-tune alignment** - Adjust rotation, scale, and position to perfectly overlay images
 
-## Installation
+## Technology Stack
 
-Via NPM:
+- **OpenCV.js** - Computer vision for border detection and perspective transformation
+- **Dynamsoft Document Viewer** - Camera capture and live document detection UI
+- **Vite** - Modern build tool and development server
+- **TypeScript** - Type-safe application code
+
+## Local Development
+
+### Prerequisites
 
 ```bash
-npm install opencv-document-scanner
+npm install
 ```
 
-Via CDN:
+### Development Server
 
-```html
-<script type="module">
-  import { DocumentScanner } from 'https://cdn.jsdelivr.net/npm/opencv-document-scanner/dist/opencv-document-scanner.js';
-</script>
+```bash
+npm run dev
 ```
 
-You also need to include OpenCV:
+For HTTPS (required for camera access):
 
-```html
-<script type="text/javascript">
-  var Module = {
-    // https://emscripten.org/docs/api_reference/module.html#Module.onRuntimeInitialized
-    onRuntimeInitialized() {
-      document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
-    }
-  };
-</script>
-<script async src="https://docs.opencv.org/4.8.0/opencv.js" type="text/javascript"></script>
+```bash
+npm run dev:https
 ```
 
-## Usage
+This requires `mkcert` to generate local SSL certificates. Install mkcert first:
 
-1. Initialize an instance.
+```bash
+# macOS
+brew install mkcert
+mkcert -install
 
-   ```js
-   const documentScanner = new DocumentScanner();
-   ```
-   
-2. Detect the polygon of documents and return the points.
+# Then generate certificates
+npm run cert
+```
 
-   ```js
-   const imgElement = document.getElementById("photoRaw");
-   const points = documentScanner.detect(imgElement, {useCanny:false}); //detect from an img or canvas element. You can use canny edge detection to detect document with uneven lightings. If the contrast of the background and the document is vivid, then you don't need to enable this.
-   ```
-   
-3. Get the cropped document image.
-   
-   ```js
-   let imgElement = document.getElementById("photoRaw")
-   const canvas = documentScanner.crop(imgElement); //get cropped image from an img or canvas element
-   ```
-   
-4. Live scanning with camera using [Dynamsoft Document Viewer](https://www.dynamsoft.com/document-viewer/docs/introduction/index.html).
-   
-   ```html
-   <script type="module">
-     import { DocumentScanner, OpenCVDocumentDetectHandler } from 'https://cdn.jsdelivr.net/npm/opencv-document-scanner/dist/opencv-document-scanner.js';
-     const documentScanner = new DocumentScanner();
-     const detectHandler = new OpenCVDocumentDetectHandler(documentScanner);
-     Dynamsoft.DDV.setProcessingHandler("documentBoundariesDetect", detectHandler);
-   </script>
-   ```
+### Build for Production
 
-   ![image](https://github.com/tony-xlh/opencvjs-document-scanner/assets/5462205/3572db79-d98c-4012-b640-fef3b5cc83d0)
+```bash
+npm run build
+```
 
+### Preview Production Build
 
-5. Edit the polygon with Dynamsoft Document Viewer.
+```bash
+npm run preview
+```
 
-   ```js
-   const points = documentScanner.detect(imgElement);
-   const quad = [];
-   points.forEach(point => {
-     quad.push([point.x,point.y]);
-   });
-   perspectiveViewer.setQuadSelection(quad);
-   ```
+## Project Structure
 
-   ![image](https://github.com/tony-xlh/opencvjs-document-scanner/assets/5462205/aad13adb-3c7e-45ae-81c3-2df5d283b4c5)
+- `/src/document-scanner.ts` - Core OpenCV-based border detection and cropping logic
+- `/src/dynamsoft-document-viewer-handler.ts` - Integration with Dynamsoft DDV for camera/live mode
+- `/src/main.ts` - Module exports
+- `/index.html` - Complete UI and application logic
 
-## Blog
+## Border Detection Algorithm
 
-[Web Document Scanner with OpenCV.js](https://www.dynamsoft.com/codepool/web-document-scanner-with-opencvjs.html)
+The app uses OpenCV.js to automatically detect painting borders:
 
+1. Convert image to grayscale (or use Canny edge detection for uneven lighting)
+2. Apply Gaussian blur to reduce noise
+3. Apply Otsu thresholding to binarize the image
+4. Find all contours in the image
+5. Select the largest contour (assumed to be the painting border)
+6. Approximate contour to a 4-point polygon
+7. Apply perspective transformation to get a deskewed rectangular image
 
+You can toggle Canny edge detection for images with challenging lighting conditions.
+
+## Deployment
+
+The app is deployed to GitHub Pages via automated CI/CD:
+
+```bash
+npm run build
+# Automated deployment via GitHub Actions
+```
+
+## Use Cases
+
+- **Watercolor painting alignment** - Compare in-progress paintings with reference photos
+- **Drawing accuracy checking** - Verify proportions and composition
+- **Art instruction** - Demonstrate alignment techniques to students
+- **Progress documentation** - Compare multiple stages of a painting
+
+## Browser Support
+
+Works in modern browsers with support for:
+- Canvas API
+- WebGL
+- WebAssembly
+- MediaDevices API (for camera capture)
+
+Mobile-optimized for iOS and Android tablets and phones.
+
+## License
+
+MIT
+
+## Credits
+
+Originally based on [opencvjs-document-scanner](https://github.com/tony-xlh/opencvjs-document-scanner) by tony-xlh, transformed into a specialized painting reference alignment tool.
