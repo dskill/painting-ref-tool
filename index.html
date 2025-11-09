@@ -82,8 +82,7 @@
   </head>
   <body>
     <div id="app">
-      <h2>🎨 Watercolor Painting Alignment Tool</h2>
-      <div id="status">Loading OpenCV...</div>
+      <h2>Reference Tool</h2>
       <div>
         <button id="loadReferenceBtn" disabled>
           🖼️ Upload Reference Photo
@@ -125,12 +124,53 @@
         <div id="comparisonViewer" class="fullscreen" style="display: none;">
           <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000;">
             <img id="comparisonImage" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-            <div id="comparisonHint" style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 1rem 2rem; border-radius: 8px; font-size: 1.1rem; pointer-events: none;">
-              Hold to see painting • Release to see reference
+
+            <!-- Toolbar -->
+            <div id="comparisonToolbar" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 0.25rem; background: rgba(0,0,0,0.8); padding: 0.5rem; border-radius: 6px; z-index: 10;">
+              <button id="fsUploadRefBtn" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                Upload Ref
+              </button>
+              <button id="fsUploadPaintingBtn" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                Upload Paint
+              </button>
+              <button id="fsLiveModeBtn" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                Live
+              </button>
+              <button id="fsAlignBtn" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                Align
+              </button>
+              <button id="fsExitBtn" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.4rem 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                Exit
+              </button>
             </div>
-            <button id="exitComparisonBtn" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 1rem; cursor: pointer; z-index: 10;">
-              ✕ Exit
-            </button>
+
+            <!-- Alignment controls (hidden by default) -->
+            <div id="alignmentControls" style="display: none; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 0.4rem 0.6rem; border-radius: 6px; z-index: 10; max-width: 90vw;">
+              <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex: 1; min-width: 120px;">
+                  <label style="color: white; font-size: 0.7rem; white-space: nowrap;">Rotate</label>
+                  <input type="range" id="rotateSlider" min="-180" max="180" step="1" value="0" style="flex: 1;">
+                  <span id="rotateValue" style="color: white; font-size: 0.65rem; min-width: 30px;">0°</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex: 1; min-width: 120px;">
+                  <label style="color: white; font-size: 0.7rem; white-space: nowrap;">Opacity</label>
+                  <input type="range" id="opacitySlider" min="0" max="1" step="0.01" value="0.5" style="flex: 1;">
+                  <span id="opacityValue" style="color: white; font-size: 0.65rem; min-width: 30px;">50%</span>
+                </div>
+
+                <div style="color: white; font-size: 0.7rem; white-space: nowrap;">
+                  Scale: <span id="scaleValue">100%</span>
+                </div>
+
+                <button id="resetAlignBtn" style="background: rgba(255,255,255,0.9); color: #333; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                  Reset
+                </button>
+                <button id="doneAlignBtn" style="background: rgba(76,175,80,0.9); color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -148,13 +188,26 @@
       let referenceImageData = null;
       let paintingImageData = null;
 
+      // Alignment mode state
+      let alignmentMode = false;
+      let alignmentCanvas = null;
+      let alignmentCtx = null;
+      let paintingTransform = {
+        scale: 1,
+        rotation: 0,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: 0.5
+      };
+      let savedPaintingTransform = null;
+      let transformedPaintingData = null;
+
       initDDV();
 
       var Module = {
         // https://emscripten.org/docs/api_reference/module.html#Module.onRuntimeInitialized
         onRuntimeInitialized() {
           documentScanner = new DocumentScanner();
-          document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
           detectHandler = new OpenCVDocumentDetectHandler(documentScanner);
           Dynamsoft.DDV.setProcessingHandler("documentBoundariesDetect", detectHandler);
           // Enable buttons now that OpenCV is ready
@@ -221,46 +274,320 @@
         }
       })
 
-      // Fullscreen comparison mode
-      document.getElementById("fullscreenCompareBtn").addEventListener("click", function(){
+      // Enter fullscreen comparison mode
+      function enterFullscreenComparison() {
         const viewer = document.getElementById("comparisonViewer");
         const img = document.getElementById("comparisonImage");
 
-        // Calculate the optimal display size based on viewport
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
+        // Load reference to get its dimensions
+        const refImg = new Image();
+        refImg.onload = function() {
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
 
-        // Load both images to get their dimensions
+          // Calculate display size based on reference aspect ratio
+          const aspectRatio = refImg.width / refImg.height;
+
+          let displayWidth = viewportWidth * 0.95;
+          let displayHeight = displayWidth / aspectRatio;
+
+          // If too tall, constrain by height instead
+          if (displayHeight > viewportHeight * 0.9) {
+            displayHeight = viewportHeight * 0.9;
+            displayWidth = displayHeight * aspectRatio;
+          }
+
+          // Set explicit size
+          img.style.width = displayWidth + 'px';
+          img.style.height = displayHeight + 'px';
+          img.style.objectFit = 'contain';
+
+          // Start with reference
+          img.src = referenceImageData;
+
+          // Show fullscreen
+          viewer.style.display = "block";
+        };
+        refImg.src = referenceImageData;
+      }
+
+      // Auto-enter fullscreen if both images are loaded
+      function checkAutoEnterFullscreen() {
+        if (hasReference && hasPainting) {
+          enterFullscreenComparison();
+        }
+      }
+
+      // Fullscreen comparison mode button
+      document.getElementById("fullscreenCompareBtn").addEventListener("click", function(){
+        enterFullscreenComparison();
+      });
+
+      // Fullscreen toolbar buttons
+      document.getElementById("fsUploadRefBtn").addEventListener("click", function(e){
+        e.stopPropagation();
+        document.getElementById("referenceFile").click();
+      });
+
+      document.getElementById("fsUploadPaintingBtn").addEventListener("click", function(e){
+        e.stopPropagation();
+        document.getElementById("paintingFile").click();
+      });
+
+      document.getElementById("fsLiveModeBtn").addEventListener("click", function(e){
+        e.stopPropagation();
+        // Close fullscreen comparison first
+        document.getElementById("comparisonViewer").style.display = "none";
+        // Open live camera mode
+        if (captureViewer) {
+          detectHandler.setScanOptions(getScanOptions());
+          document.getElementById("captureViewer").style.display = "block";
+          captureViewer.play({fill:true});
+        }
+      });
+
+      document.getElementById("fsAlignBtn").addEventListener("click", function(e){
+        e.stopPropagation();
+        enterAlignmentMode();
+      });
+
+      document.getElementById("fsExitBtn").addEventListener("click", function(e){
+        e.stopPropagation();
+        document.getElementById("comparisonViewer").style.display = "none";
+        exitAlignmentMode();
+      });
+
+      // Alignment mode functions
+      function enterAlignmentMode() {
+        alignmentMode = true;
+        document.getElementById("alignmentControls").style.display = "block";
+
+        // Restore saved transform values if they exist
+        if (savedPaintingTransform) {
+          paintingTransform.scale = savedPaintingTransform.scale;
+          paintingTransform.rotation = savedPaintingTransform.rotation;
+          paintingTransform.offsetX = savedPaintingTransform.offsetX;
+          paintingTransform.offsetY = savedPaintingTransform.offsetY;
+
+          // Update displays
+          document.getElementById("scaleValue").textContent = Math.round(savedPaintingTransform.scale * 100) + '%';
+          document.getElementById("rotateSlider").value = savedPaintingTransform.rotation;
+          document.getElementById("rotateValue").textContent = savedPaintingTransform.rotation + '°';
+        }
+
+        // Create overlay canvas if not exists
+        if (!alignmentCanvas) {
+          alignmentCanvas = document.createElement('canvas');
+          alignmentCtx = alignmentCanvas.getContext('2d');
+        }
+
+        // Switch to overlay mode
+        const img = document.getElementById("comparisonImage");
+        img.style.display = 'none';
+
+        const viewer = document.getElementById("comparisonViewer");
+        const container = viewer.querySelector('div');
+
+        // Calculate optimal display size (same as preview mode)
+        const tempImg = new Image();
+        tempImg.onload = function() {
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+          const aspectRatio = tempImg.width / tempImg.height;
+
+          let displayWidth = viewportWidth * 0.95;
+          let displayHeight = displayWidth / aspectRatio;
+
+          if (displayHeight > viewportHeight * 0.9) {
+            displayHeight = viewportHeight * 0.9;
+            displayWidth = displayHeight * aspectRatio;
+          }
+
+          // Set explicit size on canvas
+          alignmentCanvas.style.width = displayWidth + 'px';
+          alignmentCanvas.style.height = displayHeight + 'px';
+          alignmentCanvas.style.objectFit = 'contain';
+
+          container.insertBefore(alignmentCanvas, container.firstChild);
+          renderAlignmentView();
+        };
+        tempImg.src = referenceImageData;
+
+        // Enable drag to reposition
+        setupDragHandlers();
+      }
+
+      function setupDragHandlers() {
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        let initialPinchDistance = 0;
+        let initialScale = 1;
+
+        // Calculate scale factor between display size and canvas resolution
+        function getCanvasScale() {
+          const displayWidth = parseFloat(alignmentCanvas.style.width);
+          const canvasWidth = alignmentCanvas.width;
+          return canvasWidth / displayWidth;
+        }
+
+        alignmentCanvas.addEventListener('mousedown', function(e) {
+          isDragging = true;
+          lastX = e.clientX;
+          lastY = e.clientY;
+          e.stopPropagation();
+        });
+
+        alignmentCanvas.addEventListener('mousemove', function(e) {
+          if (isDragging) {
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            const scale = getCanvasScale();
+            paintingTransform.offsetX += dx * scale;
+            paintingTransform.offsetY += dy * scale;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            renderAlignmentView();
+            e.stopPropagation();
+          }
+        });
+
+        alignmentCanvas.addEventListener('mouseup', function(e) {
+          isDragging = false;
+          e.stopPropagation();
+        });
+
+        alignmentCanvas.addEventListener('mouseleave', function(e) {
+          isDragging = false;
+        });
+
+        // Mouse wheel for zoom
+        alignmentCanvas.addEventListener('wheel', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const delta = -e.deltaY / 1000;
+          paintingTransform.scale = Math.max(0.1, Math.min(3, paintingTransform.scale + delta));
+          document.getElementById("scaleValue").textContent = Math.round(paintingTransform.scale * 100) + '%';
+          renderAlignmentView();
+        });
+
+        // Touch events for drag and pinch
+        alignmentCanvas.addEventListener('touchstart', function(e) {
+          if (e.touches.length === 1) {
+            // Single touch - drag
+            isDragging = true;
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+            e.stopPropagation();
+            e.preventDefault();
+          } else if (e.touches.length === 2) {
+            // Two touches - pinch to zoom
+            isDragging = false;
+            const dx = e.touches[1].clientX - e.touches[0].clientX;
+            const dy = e.touches[1].clientY - e.touches[0].clientY;
+            initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+            initialScale = paintingTransform.scale;
+            e.stopPropagation();
+            e.preventDefault();
+          }
+        });
+
+        alignmentCanvas.addEventListener('touchmove', function(e) {
+          if (e.touches.length === 1 && isDragging) {
+            // Single touch drag
+            const dx = e.touches[0].clientX - lastX;
+            const dy = e.touches[0].clientY - lastY;
+            const scale = getCanvasScale();
+            paintingTransform.offsetX += dx * scale;
+            paintingTransform.offsetY += dy * scale;
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+            renderAlignmentView();
+            e.stopPropagation();
+            e.preventDefault();
+          } else if (e.touches.length === 2) {
+            // Pinch zoom
+            const dx = e.touches[1].clientX - e.touches[0].clientX;
+            const dy = e.touches[1].clientY - e.touches[0].clientY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const scale = (distance / initialPinchDistance) * initialScale;
+            paintingTransform.scale = Math.max(0.1, Math.min(3, scale));
+            document.getElementById("scaleValue").textContent = Math.round(paintingTransform.scale * 100) + '%';
+            renderAlignmentView();
+            e.stopPropagation();
+            e.preventDefault();
+          }
+        });
+
+        alignmentCanvas.addEventListener('touchend', function(e) {
+          if (e.touches.length < 2) {
+            isDragging = false;
+          }
+          e.stopPropagation();
+          e.preventDefault();
+        });
+      }
+
+      function exitAlignmentMode() {
+        if (!alignmentMode) return;
+        alignmentMode = false;
+        document.getElementById("alignmentControls").style.display = "none";
+
+        // Save the transform settings
+        savedPaintingTransform = {
+          scale: paintingTransform.scale,
+          rotation: paintingTransform.rotation,
+          offsetX: paintingTransform.offsetX,
+          offsetY: paintingTransform.offsetY
+        };
+
+        // Generate transformed painting image for hold/release mode
+        createTransformedPainting();
+
+        // Remove canvas and show original image
+        if (alignmentCanvas && alignmentCanvas.parentNode) {
+          alignmentCanvas.parentNode.removeChild(alignmentCanvas);
+        }
+        document.getElementById("comparisonImage").style.display = 'block';
+
+        // Reset opacity slider (but keep other values for next time)
+        document.getElementById("opacitySlider").value = 0.5;
+        paintingTransform.opacity = 0.5;
+      }
+
+      function createTransformedPainting() {
         const refImg = new Image();
         const paintImg = new Image();
-
         let loadCount = 0;
 
         function bothLoaded() {
           loadCount++;
           if (loadCount === 2) {
-            // Use the painting's aspect ratio (it's the corrected one)
-            const paintingAspect = paintImg.width / paintImg.height;
+            // Create canvas sized to reference
+            const canvas = document.createElement('canvas');
+            canvas.width = refImg.width;
+            canvas.height = refImg.height;
+            const ctx = canvas.getContext('2d');
 
-            // Calculate display size to fit viewport while maintaining aspect ratio
-            let displayWidth = viewportWidth * 0.95;
-            let displayHeight = displayWidth / paintingAspect;
+            // Clear to transparent
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (displayHeight > viewportHeight * 0.9) {
-              displayHeight = viewportHeight * 0.9;
-              displayWidth = displayHeight * paintingAspect;
-            }
+            // Apply transforms to painting
+            ctx.save();
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
 
-            // Set explicit size on the comparison image
-            img.style.width = displayWidth + 'px';
-            img.style.height = displayHeight + 'px';
-            img.style.objectFit = 'fill'; // Force both to fill the same dimensions
+            ctx.translate(centerX + savedPaintingTransform.offsetX, centerY + savedPaintingTransform.offsetY);
+            ctx.rotate((savedPaintingTransform.rotation * Math.PI) / 180);
+            ctx.scale(savedPaintingTransform.scale, savedPaintingTransform.scale);
 
-            // Start with reference
-            img.src = referenceImageData;
+            // Draw painting centered
+            ctx.drawImage(paintImg, -paintImg.width / 2, -paintImg.height / 2);
+            ctx.restore();
 
-            // Show fullscreen
-            viewer.style.display = "block";
+            // Save transformed painting
+            transformedPaintingData = canvas.toDataURL();
           }
         }
 
@@ -268,28 +595,133 @@
         paintImg.onload = bothLoaded;
         refImg.src = referenceImageData;
         paintImg.src = paintingImageData;
+      }
+
+      function renderAlignmentView() {
+        const refImg = new Image();
+        const paintImg = new Image();
+        let loadCount = 0;
+
+        function bothLoaded() {
+          loadCount++;
+          if (loadCount === 2) {
+            // Use reference image's native resolution for canvas
+            // This ensures we maintain full quality
+            const canvasWidth = refImg.width;
+            const canvasHeight = refImg.height;
+
+            alignmentCanvas.width = canvasWidth;
+            alignmentCanvas.height = canvasHeight;
+
+            // Clear canvas
+            alignmentCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // Draw reference image at full size
+            alignmentCtx.drawImage(refImg, 0, 0, canvasWidth, canvasHeight);
+
+            // Save context state
+            alignmentCtx.save();
+
+            // Set painting opacity
+            alignmentCtx.globalAlpha = paintingTransform.opacity;
+
+            // Transform for painting - all transforms happen at canvas center
+            const centerX = canvasWidth / 2;
+            const centerY = canvasHeight / 2;
+
+            alignmentCtx.translate(centerX + paintingTransform.offsetX, centerY + paintingTransform.offsetY);
+            alignmentCtx.rotate((paintingTransform.rotation * Math.PI) / 180);
+            // Scale uniformly - maintains aspect ratio
+            alignmentCtx.scale(paintingTransform.scale, paintingTransform.scale);
+
+            // Draw painting at its natural size, centered
+            // This preserves the painting's aspect ratio
+            alignmentCtx.drawImage(paintImg, -paintImg.width / 2, -paintImg.height / 2, paintImg.width, paintImg.height);
+
+            // Restore context
+            alignmentCtx.restore();
+          }
+        }
+
+        refImg.onload = bothLoaded;
+        paintImg.onload = bothLoaded;
+        refImg.src = referenceImageData;
+        paintImg.src = paintingImageData;
+      }
+
+      // Alignment control event listeners
+      document.getElementById("rotateSlider").addEventListener("input", function(e){
+        paintingTransform.rotation = parseInt(e.target.value);
+        document.getElementById("rotateValue").textContent = paintingTransform.rotation + '°';
+        renderAlignmentView();
       });
 
-      // Exit comparison mode
-      document.getElementById("exitComparisonBtn").addEventListener("click", function(e){
+      document.getElementById("opacitySlider").addEventListener("input", function(e){
+        paintingTransform.opacity = parseFloat(e.target.value);
+        document.getElementById("opacityValue").textContent = Math.round(paintingTransform.opacity * 100) + '%';
+        renderAlignmentView();
+      });
+
+      document.getElementById("resetAlignBtn").addEventListener("click", function(e){
         e.stopPropagation();
-        document.getElementById("comparisonViewer").style.display = "none";
+        paintingTransform = {
+          scale: 1,
+          rotation: 0,
+          offsetX: 0,
+          offsetY: 0,
+          opacity: 0.5
+        };
+        document.getElementById("scaleValue").textContent = '100%';
+        document.getElementById("rotateSlider").value = 0;
+        document.getElementById("rotateValue").textContent = '0°';
+        document.getElementById("opacitySlider").value = 0.5;
+        document.getElementById("opacityValue").textContent = '50%';
+
+        // Clear saved transform
+        savedPaintingTransform = null;
+        transformedPaintingData = null;
+
+        renderAlignmentView();
       });
 
-      // Prevent exit button from triggering comparison events
-      document.getElementById("exitComparisonBtn").addEventListener("mousedown", function(e){
+      document.getElementById("doneAlignBtn").addEventListener("click", function(e){
+        e.stopPropagation();
+        exitAlignmentMode();
+      });
+
+      // Prevent alignment controls from triggering comparison events
+      const alignmentControls = document.getElementById("alignmentControls");
+      alignmentControls.addEventListener("mousedown", function(e){
         e.stopPropagation();
       });
 
-      document.getElementById("exitComparisonBtn").addEventListener("mouseup", function(e){
+      alignmentControls.addEventListener("mouseup", function(e){
         e.stopPropagation();
       });
 
-      document.getElementById("exitComparisonBtn").addEventListener("touchstart", function(e){
+      alignmentControls.addEventListener("touchstart", function(e){
         e.stopPropagation();
       });
 
-      document.getElementById("exitComparisonBtn").addEventListener("touchend", function(e){
+      alignmentControls.addEventListener("touchend", function(e){
+        e.stopPropagation();
+      });
+
+      // Prevent toolbar from triggering comparison events
+      const toolbar = document.getElementById("comparisonToolbar");
+      toolbar.addEventListener("mousedown", function(e){
+        e.stopPropagation();
+      });
+
+      toolbar.addEventListener("mouseup", function(e){
+        e.stopPropagation();
+      });
+
+      toolbar.addEventListener("touchstart", function(e){
+        e.stopPropagation();
+      });
+
+      toolbar.addEventListener("touchend", function(e){
         e.stopPropagation();
       });
 
@@ -312,31 +744,41 @@
       }
 
       function showPainting() {
-        comparisonImage.src = paintingImageData;
+        // Use transformed painting if available, otherwise use original
+        if (transformedPaintingData) {
+          comparisonImage.src = transformedPaintingData;
+        } else {
+          comparisonImage.src = paintingImageData;
+        }
       }
 
       // Touch events - press to show painting, release to show reference
       comparisonViewer.addEventListener("touchstart", function(e){
+        if (alignmentMode) return; // Don't swap in alignment mode
         e.preventDefault();
         showPainting();
       });
 
       comparisonViewer.addEventListener("touchend", function(e){
+        if (alignmentMode) return; // Don't swap in alignment mode
         e.preventDefault();
         showReference();
       });
 
       // Mouse events - press to show painting, release to show reference
       comparisonViewer.addEventListener("mousedown", function(e){
+        if (alignmentMode) return; // Don't swap in alignment mode
         showPainting();
       });
 
       comparisonViewer.addEventListener("mouseup", function(e){
+        if (alignmentMode) return; // Don't swap in alignment mode
         showReference();
       });
 
       // Also handle when mouse leaves while holding
       comparisonViewer.addEventListener("mouseleave", function(e){
+        if (alignmentMode) return; // Don't swap in alignment mode
         showReference();
       });
 
@@ -354,6 +796,66 @@
         paintingImageData = dataURL;
         hasPainting = true;
         checkEnableComparisonButton();
+
+        // Apply saved transform to new painting if it exists
+        if (savedPaintingTransform && hasReference) {
+          applyTransformToNewPainting();
+        }
+
+        // Auto-enter fullscreen if reference is already loaded
+        checkAutoEnterFullscreen();
+      }
+
+      function applyTransformToNewPainting() {
+        const refImg = new Image();
+        const paintImg = new Image();
+        let loadCount = 0;
+
+        function bothLoaded() {
+          loadCount++;
+          if (loadCount === 2) {
+            // Create canvas sized to reference
+            const canvas = document.createElement('canvas');
+            canvas.width = refImg.width;
+            canvas.height = refImg.height;
+            const ctx = canvas.getContext('2d');
+
+            // Clear to transparent
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Apply transforms to painting
+            ctx.save();
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            ctx.translate(centerX + savedPaintingTransform.offsetX, centerY + savedPaintingTransform.offsetY);
+            ctx.rotate((savedPaintingTransform.rotation * Math.PI) / 180);
+            ctx.scale(savedPaintingTransform.scale, savedPaintingTransform.scale);
+
+            // Draw painting centered
+            ctx.drawImage(paintImg, -paintImg.width / 2, -paintImg.height / 2);
+            ctx.restore();
+
+            // Save transformed painting
+            transformedPaintingData = canvas.toDataURL();
+
+            // Also update the current alignment transform to match saved values
+            paintingTransform.scale = savedPaintingTransform.scale;
+            paintingTransform.rotation = savedPaintingTransform.rotation;
+            paintingTransform.offsetX = savedPaintingTransform.offsetX;
+            paintingTransform.offsetY = savedPaintingTransform.offsetY;
+
+            // Update displays to reflect saved values
+            document.getElementById("scaleValue").textContent = Math.round(savedPaintingTransform.scale * 100) + '%';
+            document.getElementById("rotateSlider").value = savedPaintingTransform.rotation;
+            document.getElementById("rotateValue").textContent = savedPaintingTransform.rotation + '°';
+          }
+        }
+
+        refImg.onload = bothLoaded;
+        paintImg.onload = bothLoaded;
+        refImg.src = referenceImageData;
+        paintImg.src = paintingImageData;
       }
 
       function checkEnableComparisonButton() {
