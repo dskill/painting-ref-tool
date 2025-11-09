@@ -200,7 +200,6 @@
         opacity: 0.5
       };
       let savedPaintingTransform = null;
-      let transformedPaintingData = null;
 
       initDDV();
 
@@ -364,15 +363,23 @@
 
         // Restore saved transform values if they exist
         if (savedPaintingTransform) {
-          paintingTransform.scale = savedPaintingTransform.scale;
-          paintingTransform.rotation = savedPaintingTransform.rotation;
-          paintingTransform.offsetX = savedPaintingTransform.offsetX;
-          paintingTransform.offsetY = savedPaintingTransform.offsetY;
+          // Load reference to convert ratios to absolute values
+          const refImg = new Image();
+          refImg.onload = function() {
+            paintingTransform.scale = savedPaintingTransform.scale;
+            paintingTransform.rotation = savedPaintingTransform.rotation;
+            // Convert ratios back to absolute pixel offsets
+            paintingTransform.offsetX = savedPaintingTransform.offsetXRatio * refImg.width;
+            paintingTransform.offsetY = savedPaintingTransform.offsetYRatio * refImg.height;
 
-          // Update displays
-          document.getElementById("scaleValue").textContent = Math.round(savedPaintingTransform.scale * 100) + '%';
-          document.getElementById("rotateSlider").value = savedPaintingTransform.rotation;
-          document.getElementById("rotateValue").textContent = savedPaintingTransform.rotation + '°';
+            // Update displays
+            document.getElementById("scaleValue").textContent = Math.round(savedPaintingTransform.scale * 100) + '%';
+            document.getElementById("rotateSlider").value = savedPaintingTransform.rotation;
+            document.getElementById("rotateValue").textContent = savedPaintingTransform.rotation + '°';
+
+            console.log("Restored transform:", paintingTransform);
+          };
+          refImg.src = referenceImageData;
         }
 
         // Create overlay canvas if not exists
@@ -534,16 +541,20 @@
         alignmentMode = false;
         document.getElementById("alignmentControls").style.display = "none";
 
-        // Save the transform settings
-        savedPaintingTransform = {
-          scale: paintingTransform.scale,
-          rotation: paintingTransform.rotation,
-          offsetX: paintingTransform.offsetX,
-          offsetY: paintingTransform.offsetY
+        // Save the transform settings normalized to reference image dimensions
+        // This allows transforms to work consistently across different painting sizes
+        const refImg = new Image();
+        refImg.onload = function() {
+          savedPaintingTransform = {
+            scale: paintingTransform.scale,
+            rotation: paintingTransform.rotation,
+            // Store offsets as ratio of reference dimensions
+            offsetXRatio: paintingTransform.offsetX / refImg.width,
+            offsetYRatio: paintingTransform.offsetY / refImg.height
+          };
+          console.log("Saved transform:", savedPaintingTransform);
         };
-
-        // Generate transformed painting image for hold/release mode
-        createTransformedPainting();
+        refImg.src = referenceImageData;
 
         // Remove canvas and show original image
         if (alignmentCanvas && alignmentCanvas.parentNode) {
@@ -554,47 +565,6 @@
         // Reset opacity slider (but keep other values for next time)
         document.getElementById("opacitySlider").value = 0.5;
         paintingTransform.opacity = 0.5;
-      }
-
-      function createTransformedPainting() {
-        const refImg = new Image();
-        const paintImg = new Image();
-        let loadCount = 0;
-
-        function bothLoaded() {
-          loadCount++;
-          if (loadCount === 2) {
-            // Create canvas sized to reference
-            const canvas = document.createElement('canvas');
-            canvas.width = refImg.width;
-            canvas.height = refImg.height;
-            const ctx = canvas.getContext('2d');
-
-            // Clear to transparent
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Apply transforms to painting
-            ctx.save();
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-
-            ctx.translate(centerX + savedPaintingTransform.offsetX, centerY + savedPaintingTransform.offsetY);
-            ctx.rotate((savedPaintingTransform.rotation * Math.PI) / 180);
-            ctx.scale(savedPaintingTransform.scale, savedPaintingTransform.scale);
-
-            // Draw painting centered
-            ctx.drawImage(paintImg, -paintImg.width / 2, -paintImg.height / 2);
-            ctx.restore();
-
-            // Save transformed painting
-            transformedPaintingData = canvas.toDataURL();
-          }
-        }
-
-        refImg.onload = bothLoaded;
-        paintImg.onload = bothLoaded;
-        refImg.src = referenceImageData;
-        paintImg.src = paintingImageData;
       }
 
       function renderAlignmentView() {
@@ -679,7 +649,6 @@
 
         // Clear saved transform
         savedPaintingTransform = null;
-        transformedPaintingData = null;
 
         renderAlignmentView();
       });
@@ -744,10 +713,50 @@
       }
 
       function showPainting() {
-        // Use transformed painting if available, otherwise use original
-        if (transformedPaintingData) {
-          comparisonImage.src = transformedPaintingData;
+        // Apply transform dynamically if we have saved transform
+        if (savedPaintingTransform && referenceImageData && paintingImageData) {
+          // Generate transformed view on-the-fly
+          const refImg = new Image();
+          const paintImg = new Image();
+          let loadCount = 0;
+
+          function bothLoaded() {
+            loadCount++;
+            if (loadCount === 2) {
+              // Create canvas sized to reference
+              const canvas = document.createElement('canvas');
+              canvas.width = refImg.width;
+              canvas.height = refImg.height;
+              const ctx = canvas.getContext('2d');
+
+              // Apply transforms to painting
+              ctx.save();
+              const centerX = canvas.width / 2;
+              const centerY = canvas.height / 2;
+
+              // Convert saved ratios to absolute pixel offsets
+              const offsetX = savedPaintingTransform.offsetXRatio * refImg.width;
+              const offsetY = savedPaintingTransform.offsetYRatio * refImg.height;
+
+              ctx.translate(centerX + offsetX, centerY + offsetY);
+              ctx.rotate((savedPaintingTransform.rotation * Math.PI) / 180);
+              ctx.scale(savedPaintingTransform.scale, savedPaintingTransform.scale);
+
+              // Draw painting centered at natural size
+              ctx.drawImage(paintImg, -paintImg.width / 2, -paintImg.height / 2, paintImg.width, paintImg.height);
+              ctx.restore();
+
+              // Display transformed painting
+              comparisonImage.src = canvas.toDataURL();
+            }
+          }
+
+          refImg.onload = bothLoaded;
+          paintImg.onload = bothLoaded;
+          refImg.src = referenceImageData;
+          paintImg.src = paintingImageData;
         } else {
+          // No transform, show original
           comparisonImage.src = paintingImageData;
         }
       }
@@ -797,65 +806,28 @@
         hasPainting = true;
         checkEnableComparisonButton();
 
-        // Apply saved transform to new painting if it exists
+        // Restore saved transform values to current transform if they exist
         if (savedPaintingTransform && hasReference) {
-          applyTransformToNewPainting();
-        }
-
-        // Auto-enter fullscreen if reference is already loaded
-        checkAutoEnterFullscreen();
-      }
-
-      function applyTransformToNewPainting() {
-        const refImg = new Image();
-        const paintImg = new Image();
-        let loadCount = 0;
-
-        function bothLoaded() {
-          loadCount++;
-          if (loadCount === 2) {
-            // Create canvas sized to reference
-            const canvas = document.createElement('canvas');
-            canvas.width = refImg.width;
-            canvas.height = refImg.height;
-            const ctx = canvas.getContext('2d');
-
-            // Clear to transparent
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Apply transforms to painting
-            ctx.save();
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-
-            ctx.translate(centerX + savedPaintingTransform.offsetX, centerY + savedPaintingTransform.offsetY);
-            ctx.rotate((savedPaintingTransform.rotation * Math.PI) / 180);
-            ctx.scale(savedPaintingTransform.scale, savedPaintingTransform.scale);
-
-            // Draw painting centered
-            ctx.drawImage(paintImg, -paintImg.width / 2, -paintImg.height / 2);
-            ctx.restore();
-
-            // Save transformed painting
-            transformedPaintingData = canvas.toDataURL();
-
-            // Also update the current alignment transform to match saved values
+          const refImg = new Image();
+          refImg.onload = function() {
             paintingTransform.scale = savedPaintingTransform.scale;
             paintingTransform.rotation = savedPaintingTransform.rotation;
-            paintingTransform.offsetX = savedPaintingTransform.offsetX;
-            paintingTransform.offsetY = savedPaintingTransform.offsetY;
+            // Convert ratios back to absolute pixel offsets
+            paintingTransform.offsetX = savedPaintingTransform.offsetXRatio * refImg.width;
+            paintingTransform.offsetY = savedPaintingTransform.offsetYRatio * refImg.height;
 
             // Update displays to reflect saved values
             document.getElementById("scaleValue").textContent = Math.round(savedPaintingTransform.scale * 100) + '%';
             document.getElementById("rotateSlider").value = savedPaintingTransform.rotation;
             document.getElementById("rotateValue").textContent = savedPaintingTransform.rotation + '°';
-          }
+
+            console.log("Applied saved transform to new painting:", paintingTransform);
+          };
+          refImg.src = referenceImageData;
         }
 
-        refImg.onload = bothLoaded;
-        paintImg.onload = bothLoaded;
-        refImg.src = referenceImageData;
-        paintImg.src = paintingImageData;
+        // Auto-enter fullscreen if reference is already loaded
+        checkAutoEnterFullscreen();
       }
 
       function checkEnableComparisonButton() {
