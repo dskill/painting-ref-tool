@@ -26,9 +26,9 @@ export function FullscreenViewer({
   const [transformedPaintingUrl, setTransformedPaintingUrl] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Generate transformed painting image when needed
+  // Pre-generate transformed painting image whenever data changes (so it's ready instantly)
   useEffect(() => {
-    if (showingPainting && savedPaintingTransform && referenceImageData && paintingImageData) {
+    if (savedPaintingTransform && referenceImageData && paintingImageData) {
       const refImg = new Image();
       const paintImg = new Image();
       let loadCount = 0;
@@ -66,7 +66,7 @@ export function FullscreenViewer({
       refImg.src = referenceImageData;
       paintImg.src = paintingImageData;
     }
-  }, [showingPainting, savedPaintingTransform, referenceImageData, paintingImageData]);
+  }, [savedPaintingTransform, referenceImageData, paintingImageData]);
 
   // Calculate display size based on reference image
   useEffect(() => {
