@@ -126,7 +126,7 @@ Works in modern browsers with support for:
 
 Mobile-optimized for iOS and Android tablets and phones.
 
-## Special Thanks
+## Credits
 
 This project was originally inspired by and built upon [opencvjs-document-scanner](https://github.com/tony-xlh/opencvjs-document-scanner) by tony-xlh, which demonstrated excellent document scanning capabilities using OpenCV.js and Dynamsoft Document Viewer.
 
@@ -135,7 +135,3 @@ This project was originally inspired by and built upon [opencvjs-document-scanne
 The original library used Dynamsoft Document Viewer (DDV), a powerful commercial document management SDK with licensing requirements. While DDV provides comprehensive features for document workflows (multi-page management, annotations, OCR integration, etc.), this painting reference tool only needed live camera preview and real-time border detection overlay.
 
 The non-commercial core document detection algorithm from the original library (the `DocumentScanner` class) is still used in this project.
-
-## Credits
-
-Originally based on [opencvjs-document-scanner](https://github.com/tony-xlh/opencvjs-document-scanner) by tony-xlh, transformed into a specialized painting reference alignment tool.
