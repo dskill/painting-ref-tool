@@ -5,17 +5,13 @@ import { AlignmentMode } from './AlignmentMode';
 
 interface FullscreenViewerProps {
   onUploadReference: (file: File) => void;
-  onUploadPainting: (file: File) => void;
   onLiveMode: () => void;
-  onDebug: () => void;
   isReady: boolean;
 }
 
 export function FullscreenViewer({
   onUploadReference,
-  onUploadPainting,
   onLiveMode,
-  onDebug,
   isReady
 }: FullscreenViewerProps) {
   const {
@@ -202,10 +198,8 @@ export function FullscreenViewer({
       {/* Toolbar */}
       <Toolbar
         onUploadReference={onUploadReference}
-        onUploadPainting={onUploadPainting}
         onLiveMode={onLiveMode}
         onAlign={handleAlign}
-        onDebug={onDebug}
         isReady={isReady}
       />
     </div>

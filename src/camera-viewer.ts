@@ -75,22 +75,19 @@ export class CameraViewer {
     const controls = document.createElement('div');
     controls.style.position = 'absolute';
     controls.style.bottom = '0';
-    controls.style.left = '0';
-    controls.style.right = '0';
+    controls.style.left = '50%';
+    controls.style.transform = 'translateX(-50%)';
     controls.style.display = 'flex';
     controls.style.justifyContent = 'center';
     controls.style.alignItems = 'center';
-    controls.style.gap = '15px';
-    controls.style.paddingTop = '30px';
-    controls.style.paddingBottom = 'max(80px, calc(env(safe-area-inset-bottom) + 60px))';
-    controls.style.paddingLeft = 'max(20px, env(safe-area-inset-left))';
-    controls.style.paddingRight = 'max(20px, env(safe-area-inset-right))';
-    controls.style.background = 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 70%, transparent 100%)';
+    controls.style.gap = '0.25rem';
+    controls.style.padding = '0.5rem';
+    controls.style.paddingBottom = 'max(110px, calc(env(safe-area-inset-bottom) + 90px))';
     controls.style.zIndex = '10';
 
     controls.appendChild(this.edgeModeButton);
-    controls.appendChild(this.flashButton);
     controls.appendChild(this.captureButton);
+    controls.appendChild(this.flashButton);
 
     this.container.appendChild(this.canvas);
     this.container.appendChild(controls);
@@ -101,15 +98,14 @@ export class CameraViewer {
     const button = document.createElement('button');
     button.textContent = 'Capture';
     button.style.cssText = `
-      padding: 15px 40px;
-      font-size: 18px;
-      background: #4CAF50;
+      background: rgba(0,0,0,0.4);
       color: white;
-      border: none;
-      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 0.625rem 1.25rem;
+      border-radius: 4px;
+      font-size: 1.125rem;
       cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      min-width: 105px;
     `;
 
     button.addEventListener('click', () => this.capture());
@@ -119,16 +115,16 @@ export class CameraViewer {
 
   private createFlashButton(): HTMLButtonElement {
     const button = document.createElement('button');
-    button.textContent = '💡 Flash';
+    button.textContent = 'Flash';
     button.style.cssText = `
-      padding: 15px 20px;
-      font-size: 16px;
-      background: #555;
-      color: white;
-      border: none;
-      border-radius: 8px;
+      background: ${this.flashEnabled ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.4)'};
+      color: ${this.flashEnabled ? '#333' : 'white'};
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 0.625rem 1.25rem;
+      border-radius: 4px;
+      font-size: 1.125rem;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      min-width: 105px;
     `;
 
     button.addEventListener('click', () => this.toggleFlash());
@@ -138,16 +134,16 @@ export class CameraViewer {
 
   private createEdgeModeButton(): HTMLButtonElement {
     const button = document.createElement('button');
-    button.textContent = this.scanOptions.useCanny ? 'Edge: ON' : 'Edge: OFF';
+    button.textContent = this.scanOptions.useCanny ? 'Edge' : 'Fill';
     button.style.cssText = `
-      padding: 15px 20px;
-      font-size: 16px;
-      background: ${this.scanOptions.useCanny ? '#2196F3' : '#555'};
+      background: rgba(0,0,0,0.4);
       color: white;
-      border: none;
-      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 0.625rem 1.25rem;
+      border-radius: 4px;
+      font-size: 1.125rem;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      min-width: 105px;
     `;
 
     button.addEventListener('click', () => this.toggleEdgeMode());
@@ -157,8 +153,7 @@ export class CameraViewer {
 
   private toggleEdgeMode(): void {
     this.scanOptions.useCanny = !this.scanOptions.useCanny;
-    this.edgeModeButton.textContent = this.scanOptions.useCanny ? 'Edge: ON' : 'Edge: OFF';
-    this.edgeModeButton.style.background = this.scanOptions.useCanny ? '#2196F3' : '#555';
+    this.edgeModeButton.textContent = this.scanOptions.useCanny ? 'Edge' : 'Fill';
   }
 
   async start(): Promise<void> {
@@ -302,8 +297,9 @@ export class CameraViewer {
         advanced: [{ torch: this.flashEnabled } as any]
       });
 
-      this.flashButton.style.background = this.flashEnabled ? '#FFA500' : '#555';
-      this.flashButton.textContent = this.flashEnabled ? '💡 Flash ON' : '💡 Flash';
+      // Update button styling to show flash state
+      this.flashButton.style.background = this.flashEnabled ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.4)';
+      this.flashButton.style.color = this.flashEnabled ? '#333' : 'white';
     } catch (error) {
       console.error('Failed to toggle flash:', error);
       alert('Failed to toggle flash');

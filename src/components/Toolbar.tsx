@@ -2,45 +2,27 @@ import React, { useRef } from 'react';
 
 interface ToolbarProps {
   onUploadReference: (file: File) => void;
-  onUploadPainting: (file: File) => void;
   onLiveMode: () => void;
   onAlign: () => void;
-  onDebug: () => void;
   isReady: boolean;
 }
 
 export function Toolbar({
   onUploadReference,
-  onUploadPainting,
   onLiveMode,
   onAlign,
-  onDebug,
   isReady
 }: ToolbarProps) {
   const referenceFileRef = useRef<HTMLInputElement>(null);
-  const paintingFileRef = useRef<HTMLInputElement>(null);
 
   const handleReferenceClick = () => {
     referenceFileRef.current?.click();
-  };
-
-  const handlePaintingClick = () => {
-    paintingFileRef.current?.click();
   };
 
   const handleReferenceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       onUploadReference(file);
-      // Reset the input so the same file can be selected again
-      e.target.value = '';
-    }
-  };
-
-  const handlePaintingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onUploadPainting(file);
       // Reset the input so the same file can be selected again
       e.target.value = '';
     }
@@ -73,93 +55,54 @@ export function Toolbar({
         style={{ display: 'none' }}
         onChange={handleReferenceChange}
       />
-      <input
-        ref={paintingFileRef}
-        type="file"
-        accept=".jpg,.jpeg,.png,.bmp"
-        style={{ display: 'none' }}
-        onChange={handlePaintingChange}
-      />
 
       <button
         disabled={!isReady}
         onClick={handleReferenceClick}
         style={{
-          background: 'rgba(255,255,255,0.9)',
-          color: '#333',
-          border: 'none',
-          padding: '0.4rem 0.7rem',
+          background: 'rgba(0,0,0,0.4)',
+          color: 'white',
+          border: '1px solid rgba(255,255,255,0.6)',
+          padding: '0.625rem 1.25rem',
           borderRadius: '4px',
-          fontSize: '0.8rem',
+          fontSize: '1.125rem',
           cursor: isReady ? 'pointer' : 'not-allowed',
           opacity: isReady ? 1 : 0.5
         }}
       >
-        Upload Ref
-      </button>
-
-      <button
-        disabled={!isReady}
-        onClick={handlePaintingClick}
-        style={{
-          background: 'rgba(255,255,255,0.9)',
-          color: '#333',
-          border: 'none',
-          padding: '0.4rem 0.7rem',
-          borderRadius: '4px',
-          fontSize: '0.8rem',
-          cursor: isReady ? 'pointer' : 'not-allowed',
-          opacity: isReady ? 1 : 0.5
-        }}
-      >
-        Upload Paint
+        Reference
       </button>
 
       <button
         disabled={!isReady}
         onClick={onLiveMode}
         style={{
-          background: 'rgba(255,255,255,0.9)',
-          color: '#333',
-          border: 'none',
-          padding: '0.4rem 0.7rem',
+          background: 'rgba(0,0,0,0.4)',
+          color: 'white',
+          border: '1px solid rgba(255,255,255,0.6)',
+          padding: '0.625rem 1.25rem',
           borderRadius: '4px',
-          fontSize: '0.8rem',
+          fontSize: '1.125rem',
           cursor: isReady ? 'pointer' : 'not-allowed',
           opacity: isReady ? 1 : 0.5
         }}
       >
-        Live
+        Art
       </button>
 
       <button
         onClick={onAlign}
         style={{
-          background: 'rgba(255,255,255,0.9)',
-          color: '#333',
-          border: 'none',
-          padding: '0.4rem 0.7rem',
+          background: 'rgba(0,0,0,0.4)',
+          color: 'white',
+          border: '1px solid rgba(255,255,255,0.6)',
+          padding: '0.625rem 1.25rem',
           borderRadius: '4px',
-          fontSize: '0.8rem',
+          fontSize: '1.125rem',
           cursor: 'pointer'
         }}
       >
         Align
-      </button>
-
-      <button
-        onClick={onDebug}
-        style={{
-          background: 'rgba(255,255,255,0.9)',
-          color: '#333',
-          border: 'none',
-          padding: '0.4rem 0.7rem',
-          borderRadius: '4px',
-          fontSize: '0.8rem',
-          cursor: 'pointer'
-        }}
-      >
-        Debug
       </button>
     </div>
   );
