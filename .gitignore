@@ -22,7 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-public/opencv.js
 public/dynamsoft-document-viewer
 
 # SSL certificates
