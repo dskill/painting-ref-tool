@@ -4,7 +4,6 @@ A web-based tool that helps artists compare their drawings and paintings with re
 
 **[Try it now](https://dskill.github.io/painting-ref-tool/)**
 
-> This project was started from [opencvjs-document-scanner](https://github.com/tony-xlh/opencvjs-document-scanner) but has been completely transformed for artist reference alignment workflows.
 
 ## Features
 
@@ -126,10 +125,6 @@ Works in modern browsers with support for:
 - MediaDevices API (for camera capture)
 
 Mobile-optimized for iOS and Android tablets and phones.
-
-## License
-
-MIT
 
 ## Special Thanks
 
