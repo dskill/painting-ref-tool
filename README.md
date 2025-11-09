@@ -1,6 +1,6 @@
-# Watercolor Painting Alignment Reference Tool
+# Artists' Reference Alignment Tool
 
-A web-based tool that helps artists compare their watercolor paintings with reference photos during the artistic process. Uses OpenCV.js for automatic border detection and perspective correction, with an interactive fullscreen comparison mode.
+A web-based tool that helps artists compare their drawings and paintings with reference photos during the artistic process. Uses OpenCV.js for automatic border detection and perspective correction, with an interactive fullscreen comparison mode.
 
 **[Try it now](https://dskill.github.io/painting-ref-tool/)**
 
@@ -30,7 +30,8 @@ A web-based tool that helps artists compare their watercolor paintings with refe
 ## Technology Stack
 
 - **OpenCV.js** - Computer vision for border detection and perspective transformation
-- **Dynamsoft Document Viewer** - Camera capture and live document detection UI
+- **Custom Camera Viewer** - Real-time camera capture with live border detection overlay
+- **React** - UI component framework
 - **Vite** - Modern build tool and development server
 - **TypeScript** - Type-safe application code
 
@@ -80,9 +81,11 @@ npm run preview
 ## Project Structure
 
 - `/src/document-scanner.ts` - Core OpenCV-based border detection and cropping logic
-- `/src/dynamsoft-document-viewer-handler.ts` - Integration with Dynamsoft DDV for camera/live mode
-- `/src/main.ts` - Module exports
-- `/index.html` - Complete UI and application logic
+- `/src/camera-viewer.ts` - Custom camera viewer with real-time detection overlay
+- `/src/App.tsx` - Main React application component
+- `/src/components/` - React UI components
+- `/src/hooks/` - Custom React hooks for OpenCV integration
+- `/index.html` - Application entry point
 
 ## Border Detection Algorithm
 
@@ -127,6 +130,16 @@ Mobile-optimized for iOS and Android tablets and phones.
 ## License
 
 MIT
+
+## Special Thanks
+
+This project was originally inspired by and built upon [opencvjs-document-scanner](https://github.com/tony-xlh/opencvjs-document-scanner) by tony-xlh, which demonstrated excellent document scanning capabilities using OpenCV.js and Dynamsoft Document Viewer.
+
+### Why We Built a Custom Camera Viewer
+
+The original library used Dynamsoft Document Viewer (DDV), a powerful commercial document management SDK with licensing requirements. While DDV provides comprehensive features for document workflows (multi-page management, annotations, OCR integration, etc.), this painting reference tool only needed live camera preview and real-time border detection overlay.
+
+The non-commercial core document detection algorithm from the original library (the `DocumentScanner` class) is still used in this project.
 
 ## Credits
 

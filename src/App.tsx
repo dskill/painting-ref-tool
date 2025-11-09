@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useOpenCV } from './hooks/useOpenCV';
-import { useDynamsoft } from './hooks/useDynamsoft';
 import { useAppContext } from './context/AppContext';
 import { FullscreenViewer } from './components/FullscreenViewer';
+import { CameraViewer } from './camera-viewer';
 
 export function App() {
-  const { isReady: opencvReady, documentScanner, detectHandler } = useOpenCV();
-  const { isReady: dynamstoftReady, doc, captureViewer, setCaptureViewer } = useDynamsoft();
+  const { isReady: opencvReady, documentScanner } = useOpenCV();
   const {
     setHasReference,
     setHasPainting,
@@ -21,55 +20,18 @@ export function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [showCaptureViewer, setShowCaptureViewer] = useState(false);
   const captureViewerRef = useRef<HTMLDivElement>(null);
-  const isReady = opencvReady && dynamstoftReady;
+  const cameraViewerRef = useRef<CameraViewer | null>(null);
+  const isReady = opencvReady;
 
-  // Initialize capture viewer
+  // Cleanup camera viewer on unmount
   useEffect(() => {
-    if (!dynamstoftReady || !doc || !captureViewerRef.current || captureViewer) return;
-
-    async function setupCaptureViewer() {
-      const Dynamsoft = (window as any).Dynamsoft;
-      const viewer = new Dynamsoft.DDV.CaptureViewer({
-        container: captureViewerRef.current!,
-        viewerConfig: {
-          enableAutoCapture: false,
-          enableAutoDetect: true
-        }
-      });
-
-      // Select camera (prefer OBS for desktop testing)
-      const cameras = await viewer.getAllCameras();
-      for (const camera of cameras) {
-        if (camera.label.indexOf('OBS') !== -1) {
-          viewer.selectCamera(camera);
-          break;
-        }
+    return () => {
+      if (cameraViewerRef.current) {
+        cameraViewerRef.current.destroy();
+        cameraViewerRef.current = null;
       }
-
-      // Handle captured images
-      viewer.on('captured', async (e: any) => {
-        viewer.stop();
-        setShowCaptureViewer(false);
-
-        const pageData = viewer.currentDocument.getPageData(e.pageUid);
-        const raw = await pageData.raw();
-        const url = URL.createObjectURL(raw.data);
-
-        // Load and process the image
-        const img = new Image();
-        img.onload = () => {
-          processAndCropImage(img);
-          viewer.currentDocument.deleteAllPages();
-        };
-        img.src = url;
-      });
-
-      viewer.openDocument(doc.uid);
-      setCaptureViewer(viewer);
-    }
-
-    setupCaptureViewer();
-  }, [dynamstoftReady, doc, captureViewerRef]);
+    };
+  }, []);
 
   // Process and crop painting image
   const processAndCropImage = (img: HTMLImageElement) => {
@@ -136,17 +98,53 @@ export function App() {
     reader.readAsDataURL(file);
   };
 
-  const handleLiveMode = () => {
-    if (!captureViewer || !detectHandler) return;
+  const handleLiveMode = async () => {
+    if (!documentScanner || !captureViewerRef.current) return;
 
-    const options: any = {};
-    if (enableCanny) {
-      options.useCanny = true;
+    try {
+      // Clean up previous viewer if exists
+      if (cameraViewerRef.current) {
+        cameraViewerRef.current.destroy();
+      }
+
+      // Show capture viewer container
+      setShowCaptureViewer(true);
+
+      // Create and start new camera viewer
+      const viewer = new CameraViewer({
+        container: captureViewerRef.current,
+        detectionInterval: 60, // ~17fps
+        scanOptions: { useCanny: enableCanny },
+        onCaptured: (croppedCanvas) => {
+          const dataURL = croppedCanvas.toDataURL();
+          setPaintingImageData(dataURL);
+          setHasPainting(true);
+          setShowCaptureViewer(false);
+
+          // Restore saved transform if it exists
+          if (savedPaintingTransform) {
+            const refImg = new Image();
+            refImg.onload = () => {
+              setPaintingTransform({
+                scale: savedPaintingTransform.scale,
+                rotation: savedPaintingTransform.rotation,
+                offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
+                offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
+                opacity: paintingTransform.opacity
+              });
+            };
+            refImg.src = dataURL;
+          }
+        }
+      });
+
+      cameraViewerRef.current = viewer;
+      await viewer.start();
+    } catch (error) {
+      console.error('Failed to start camera:', error);
+      setShowCaptureViewer(false);
+      alert('Failed to access camera. Please ensure camera permissions are granted.');
     }
-    detectHandler.setScanOptions(options);
-
-    setShowCaptureViewer(true);
-    captureViewer.play({ fill: true });
   };
 
   const handleDebug = () => {
