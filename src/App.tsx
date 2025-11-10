@@ -7,6 +7,7 @@ import { CameraViewer } from './camera-viewer';
 export function App() {
   const { isReady: opencvReady, documentScanner } = useOpenCV();
   const {
+    isLoading,
     setHasReference,
     setHasPainting,
     setReferenceImageData,
@@ -131,6 +132,27 @@ export function App() {
       alert('Failed to access camera. Please ensure camera permissions are granted.');
     }
   };
+
+  // Show loading screen while restoring saved state
+  if (isLoading) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#000',
+        color: '#fff',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <>
