@@ -15,7 +15,11 @@ export function App() {
     enableCanny,
     savedPaintingTransform,
     paintingTransform,
-    setPaintingTransform
+    setPaintingTransform,
+    setProjectAspectWidth,
+    setProjectAspectHeight,
+    projectAspectWidth,
+    projectAspectHeight
   } = useAppContext();
 
   const [showCaptureViewer, setShowCaptureViewer] = useState(false);
@@ -43,7 +47,17 @@ export function App() {
     }
 
     const points = documentScanner.detect(img, options);
-    const canvas = documentScanner.crop(img, points);
+
+    // Calculate output dimensions based on project aspect ratio
+    const aspectRatio = projectAspectWidth / projectAspectHeight;
+    const detectedWidth = Math.max(
+      documentScanner.distance(points[0], points[1]),
+      documentScanner.distance(points[2], points[3])
+    );
+    const outputWidth = Math.round(detectedWidth);
+    const outputHeight = Math.round(outputWidth / aspectRatio);
+
+    const canvas = documentScanner.crop(img, points, outputWidth, outputHeight);
     const dataURL = canvas.toDataURL();
 
     setPaintingImageData(dataURL);
@@ -77,6 +91,9 @@ export function App() {
       img.onload = () => {
         setReferenceImageData(result);
         setHasReference(true);
+        // Initialize project aspect ratio to match reference image
+        setProjectAspectWidth(img.width);
+        setProjectAspectHeight(img.height);
       };
       img.src = result;
     };
@@ -101,6 +118,8 @@ export function App() {
         container: captureViewerRef.current,
         detectionInterval: 60, // ~17fps
         scanOptions: { useCanny: enableCanny },
+        projectAspectWidth,
+        projectAspectHeight,
         onCaptured: (croppedCanvas) => {
           const dataURL = croppedCanvas.toDataURL();
           setPaintingImageData(dataURL);

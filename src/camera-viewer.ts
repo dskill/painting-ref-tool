@@ -4,6 +4,8 @@ export interface CameraViewerOptions {
   container: HTMLElement;
   detectionInterval?: number; // ms between detection runs (default: 60ms for ~17fps)
   scanOptions?: { useCanny?: boolean };
+  projectAspectWidth?: number;
+  projectAspectHeight?: number;
   onCaptured?: (croppedCanvas: HTMLCanvasElement) => void;
 }
 
@@ -16,6 +18,8 @@ export class CameraViewer {
   private scanner: DocumentScanner;
   private detectionInterval: number;
   private scanOptions: { useCanny?: boolean };
+  private projectAspectWidth?: number;
+  private projectAspectHeight?: number;
   private onCaptured?: (croppedCanvas: HTMLCanvasElement) => void;
 
   private detectedPoints: Point[] | null = null;
@@ -33,6 +37,8 @@ export class CameraViewer {
     this.container = options.container;
     this.detectionInterval = options.detectionInterval || 60; // ~17fps default
     this.scanOptions = options.scanOptions || { useCanny: true };
+    this.projectAspectWidth = options.projectAspectWidth;
+    this.projectAspectHeight = options.projectAspectHeight;
     this.onCaptured = options.onCaptured;
     this.scanner = new DocumentScanner();
 
@@ -322,7 +328,21 @@ export class CameraViewer {
 
       // Crop using detected points (or detect now if not available)
       const points = this.detectedPoints || this.scanner.detect(captureCanvas, this.scanOptions);
-      const croppedCanvas = this.scanner.crop(captureCanvas, points);
+
+      // Calculate output dimensions based on project aspect ratio
+      let croppedCanvas: HTMLCanvasElement;
+      if (this.projectAspectWidth && this.projectAspectHeight) {
+        const aspectRatio = this.projectAspectWidth / this.projectAspectHeight;
+        const detectedWidth = Math.max(
+          this.scanner.distance(points[0], points[1]),
+          this.scanner.distance(points[2], points[3])
+        );
+        const outputWidth = Math.round(detectedWidth);
+        const outputHeight = Math.round(outputWidth / aspectRatio);
+        croppedCanvas = this.scanner.crop(captureCanvas, points, outputWidth, outputHeight);
+      } else {
+        croppedCanvas = this.scanner.crop(captureCanvas, points);
+      }
 
       // Stop camera
       this.stop();

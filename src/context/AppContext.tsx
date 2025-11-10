@@ -33,6 +33,10 @@ interface AppContextType {
   setSavedPaintingTransform: (value: SavedPaintingTransform | null) => void;
   enableCanny: boolean;
   setEnableCanny: (value: boolean) => void;
+  projectAspectWidth: number;
+  setProjectAspectWidth: (value: number) => void;
+  projectAspectHeight: number;
+  setProjectAspectHeight: (value: number) => void;
   isLoading: boolean;
 }
 
@@ -46,6 +50,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [paintingImageData, setPaintingImageData] = useState<string | null>(null);
   const [alignmentMode, setAlignmentMode] = useState(false);
   const [enableCanny, setEnableCanny] = useState(true);
+  const [projectAspectWidth, setProjectAspectWidth] = useState(1920);
+  const [projectAspectHeight, setProjectAspectHeight] = useState(1080);
   const [paintingTransform, setPaintingTransform] = useState<PaintingTransform>({
     scale: 1,
     rotation: 0,
@@ -78,6 +84,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setSavedPaintingTransform(savedState.savedPaintingTransform);
           }
           setEnableCanny(savedState.enableCanny);
+          setProjectAspectWidth(savedState.projectAspectWidth);
+          setProjectAspectHeight(savedState.projectAspectHeight);
         }
       } catch (error) {
         console.error('Failed to load saved state:', error);
@@ -100,7 +108,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           referenceImageData,
           paintingImageData,
           savedPaintingTransform,
-          enableCanny
+          enableCanny,
+          projectAspectWidth,
+          projectAspectHeight
         );
       } catch (error) {
         console.error('Failed to save state:', error);
@@ -112,7 +122,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     save();
-  }, [referenceImageData, paintingImageData, savedPaintingTransform, enableCanny, isLoading]);
+  }, [referenceImageData, paintingImageData, savedPaintingTransform, enableCanny, projectAspectWidth, projectAspectHeight, isLoading]);
 
   return (
     <AppContext.Provider
@@ -133,6 +143,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSavedPaintingTransform,
         enableCanny,
         setEnableCanny,
+        projectAspectWidth,
+        setProjectAspectWidth,
+        projectAspectHeight,
+        setProjectAspectHeight,
         isLoading
       }}
     >

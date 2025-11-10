@@ -9,7 +9,11 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
     paintingTransform,
     setPaintingTransform,
     savedPaintingTransform,
-    setSavedPaintingTransform
+    setSavedPaintingTransform,
+    projectAspectWidth,
+    setProjectAspectWidth,
+    projectAspectHeight,
+    setProjectAspectHeight
   } = useAppContext();
 
   const [scaleDisplay, setScaleDisplay] = useState('100%');
@@ -193,6 +197,16 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
     });
     setScaleDisplay('100%');
     setSavedPaintingTransform(null);
+
+    // Reset aspect ratio to match reference image
+    if (referenceImageData) {
+      const refImg = new Image();
+      refImg.onload = () => {
+        setProjectAspectWidth(refImg.width);
+        setProjectAspectHeight(refImg.height);
+      };
+      refImg.src = referenceImageData;
+    }
   };
 
   const handleDone = (e: React.MouseEvent) => {
@@ -285,6 +299,41 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
         onMouseUp={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Canvas</label>
+            <input
+              type="number"
+              min="1"
+              max="10000"
+              value={projectAspectWidth}
+              onChange={(e) => setProjectAspectWidth(parseInt(e.target.value) || 1)}
+              style={{
+                width: '60px',
+                padding: '0.25rem',
+                fontSize: '0.7rem',
+                background: 'rgba(255,255,255,0.9)',
+                border: '1px solid #ccc',
+                borderRadius: '3px'
+              }}
+            />
+            <span style={{ color: 'white', fontSize: '0.7rem' }}>×</span>
+            <input
+              type="number"
+              min="1"
+              max="10000"
+              value={projectAspectHeight}
+              onChange={(e) => setProjectAspectHeight(parseInt(e.target.value) || 1)}
+              style={{
+                width: '60px',
+                padding: '0.25rem',
+                fontSize: '0.7rem',
+                background: 'rgba(255,255,255,0.9)',
+                border: '1px solid #ccc',
+                borderRadius: '3px'
+              }}
+            />
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: '120px' }}>
             <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Rotate</label>
             <input

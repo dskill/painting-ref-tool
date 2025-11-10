@@ -22,6 +22,8 @@ interface PersistedState {
   paintingImage: Blob | null;
   savedPaintingTransform: SavedPaintingTransform | null;
   enableCanny: boolean;
+  projectAspectWidth: number;
+  projectAspectHeight: number;
   lastUpdated: string;
 }
 
@@ -102,7 +104,9 @@ export async function saveAppState(
   referenceImageData: string | null,
   paintingImageData: string | null,
   savedPaintingTransform: SavedPaintingTransform | null,
-  enableCanny: boolean
+  enableCanny: boolean,
+  projectAspectWidth: number,
+  projectAspectHeight: number
 ): Promise<void> {
   try {
     const db = await openDB();
@@ -121,6 +125,8 @@ export async function saveAppState(
       paintingImage: paintingBlob,
       savedPaintingTransform,
       enableCanny,
+      projectAspectWidth,
+      projectAspectHeight,
       lastUpdated: new Date().toISOString(),
     };
 
@@ -146,6 +152,8 @@ export async function loadAppState(): Promise<{
   paintingImageData: string | null;
   savedPaintingTransform: SavedPaintingTransform | null;
   enableCanny: boolean;
+  projectAspectWidth: number;
+  projectAspectHeight: number;
 } | null> {
   try {
     const db = await openDB();
@@ -176,6 +184,8 @@ export async function loadAppState(): Promise<{
       paintingImageData,
       savedPaintingTransform: state.savedPaintingTransform,
       enableCanny: state.enableCanny,
+      projectAspectWidth: state.projectAspectWidth || 1920,
+      projectAspectHeight: state.projectAspectHeight || 1080,
     };
   } catch (error) {
     console.error('Failed to load app state:', error);
