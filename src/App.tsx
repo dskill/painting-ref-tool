@@ -18,8 +18,6 @@ export function App() {
     referenceImageData,
     enableCanny,
     setEnableCanny,
-    flashEnabled,
-    setFlashEnabled,
     savedPaintingTransform,
     paintingTransform,
     setPaintingTransform,
@@ -225,7 +223,6 @@ export function App() {
         container: captureViewerRef.current,
         detectionInterval: 60, // ~17fps
         scanOptions: { useCanny: enableCanny },
-        flashEnabled,
         projectAspectWidth,
         projectAspectHeight,
         onCaptured: async (data) => {
@@ -234,9 +231,6 @@ export function App() {
         },
         onEdgeModeToggle: (useCanny) => {
           setEnableCanny(useCanny);
-        },
-        onFlashToggle: (enabled) => {
-          setFlashEnabled(enabled);
         }
       });
 

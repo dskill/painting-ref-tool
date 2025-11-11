@@ -9,12 +9,10 @@ export interface CameraViewerOptions {
   container: HTMLElement;
   detectionInterval?: number; // ms between detection runs (default: 60ms for ~17fps)
   scanOptions?: { useCanny?: boolean };
-  flashEnabled?: boolean;
   projectAspectWidth?: number;
   projectAspectHeight?: number;
   onCaptured?: (data: CapturedImageData) => void;
   onEdgeModeToggle?: (useCanny: boolean) => void;
-  onFlashToggle?: (flashEnabled: boolean) => void;
 }
 
 export class CameraViewer {
@@ -30,7 +28,6 @@ export class CameraViewer {
   private projectAspectHeight?: number;
   private onCaptured?: (data: CapturedImageData) => void;
   private onEdgeModeToggle?: (useCanny: boolean) => void;
-  private onFlashToggle?: (flashEnabled: boolean) => void;
 
   private detectedPoints: Point[] | null = null;
   private detectionTimer: number | null = null;
@@ -47,12 +44,10 @@ export class CameraViewer {
     this.container = options.container;
     this.detectionInterval = options.detectionInterval || 60; // ~17fps default
     this.scanOptions = options.scanOptions || { useCanny: true };
-    this.flashEnabled = options.flashEnabled ?? false;
     this.projectAspectWidth = options.projectAspectWidth;
     this.projectAspectHeight = options.projectAspectHeight;
     this.onCaptured = options.onCaptured;
     this.onEdgeModeToggle = options.onEdgeModeToggle;
-    this.onFlashToggle = options.onFlashToggle;
     this.scanner = new DocumentScanner();
 
     // Create video element (hidden)
@@ -323,11 +318,6 @@ export class CameraViewer {
       // Update button styling to show flash state
       this.flashButton.style.background = this.flashEnabled ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.4)';
       this.flashButton.style.color = this.flashEnabled ? '#333' : 'white';
-
-      // Notify parent so the setting persists
-      if (this.onFlashToggle) {
-        this.onFlashToggle(this.flashEnabled);
-      }
     } catch (error) {
       console.error('Failed to toggle flash:', error);
       alert('Failed to toggle flash');

@@ -33,7 +33,6 @@ interface PersistedState {
   savedPaintingTransform: SavedPaintingTransform | null;
   capturedPaintingData: CapturedPaintingData | null;
   enableCanny: boolean;
-  flashEnabled: boolean;
   projectAspectWidth: number;
   projectAspectHeight: number;
   lastUpdated: string;
@@ -118,7 +117,6 @@ export async function saveAppState(
   savedPaintingTransform: SavedPaintingTransform | null,
   capturedPaintingData: CapturedPaintingData | null,
   enableCanny: boolean,
-  flashEnabled: boolean,
   projectAspectWidth: number,
   projectAspectHeight: number
 ): Promise<void> {
@@ -140,7 +138,6 @@ export async function saveAppState(
       savedPaintingTransform,
       capturedPaintingData,
       enableCanny,
-      flashEnabled,
       projectAspectWidth,
       projectAspectHeight,
       lastUpdated: new Date().toISOString(),
@@ -169,7 +166,6 @@ export async function loadAppState(): Promise<{
   savedPaintingTransform: SavedPaintingTransform | null;
   capturedPaintingData: CapturedPaintingData | null;
   enableCanny: boolean;
-  flashEnabled: boolean;
   projectAspectWidth: number;
   projectAspectHeight: number;
 } | null> {
@@ -203,7 +199,6 @@ export async function loadAppState(): Promise<{
       savedPaintingTransform: state.savedPaintingTransform,
       capturedPaintingData: state.capturedPaintingData || null,
       enableCanny: state.enableCanny,
-      flashEnabled: state.flashEnabled ?? false,
       projectAspectWidth: state.projectAspectWidth || 1,
       projectAspectHeight: state.projectAspectHeight || 1,
     };
