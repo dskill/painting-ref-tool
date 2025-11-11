@@ -76,20 +76,49 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
 
   // Initial render and restore saved transform
   useEffect(() => {
-    if (savedPaintingTransform && referenceImageData) {
-      const refImg = new Image();
-      refImg.onload = () => {
-        setPaintingTransform({
-          scale: savedPaintingTransform.scale,
-          rotation: savedPaintingTransform.rotation,
-          offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
-          offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
-          opacity: paintingTransform.opacity
-        });
-        setScaleDisplay(Math.round(savedPaintingTransform.scale * 100) + '%');
-      };
-      refImg.src = referenceImageData;
+    if (!referenceImageData || !paintingImageData) return;
+
+    const refImg = new Image();
+    const paintImg = new Image();
+    let loadCount = 0;
+
+    function bothLoaded() {
+      loadCount++;
+      if (loadCount === 2) {
+        if (savedPaintingTransform) {
+          // Restore saved transform
+          setPaintingTransform({
+            scale: savedPaintingTransform.scale,
+            rotation: savedPaintingTransform.rotation,
+            offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
+            offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
+            opacity: paintingTransform.opacity
+          });
+          setScaleDisplay(Math.round(savedPaintingTransform.scale * 100) + '%');
+        } else {
+          // Calculate initial scale to normalize painting size to match reference
+          // Both images should represent the same physical object, so scale based on their dimensions
+          const scaleX = refImg.width / paintImg.width;
+          const scaleY = refImg.height / paintImg.height;
+          // Use the average scale to handle slight aspect ratio differences
+          const initialScale = (scaleX + scaleY) / 2;
+          
+          setPaintingTransform({
+            scale: initialScale,
+            rotation: 0,
+            offsetX: 0,
+            offsetY: 0,
+            opacity: 0.5
+          });
+          setScaleDisplay(Math.round(initialScale * 100) + '%');
+        }
+      }
     }
+
+    refImg.onload = bothLoaded;
+    paintImg.onload = bothLoaded;
+    refImg.src = referenceImageData;
+    paintImg.src = paintingImageData;
   }, []);
 
   useEffect(() => {
@@ -134,7 +163,7 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     e.stopPropagation();
     const delta = -e.deltaY / 1000;
-    const newScale = Math.max(0.1, Math.min(3, paintingTransform.scale + delta));
+    const newScale = Math.max(0.1, Math.min(10, paintingTransform.scale + delta));
     setPaintingTransform({ ...paintingTransform, scale: newScale });
     setScaleDisplay(Math.round(newScale * 100) + '%');
   };
@@ -170,7 +199,7 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
       const dx = e.touches[1].clientX - e.touches[0].clientX;
       const dy = e.touches[1].clientY - e.touches[0].clientY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      const newScale = Math.max(0.1, Math.min(3, (distance / pinchStart.distance) * pinchStart.scale));
+      const newScale = Math.max(0.1, Math.min(10, (distance / pinchStart.distance) * pinchStart.scale));
       setPaintingTransform({ ...paintingTransform, scale: newScale });
       setScaleDisplay(Math.round(newScale * 100) + '%');
     }
@@ -188,24 +217,52 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
 
   const handleReset = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setPaintingTransform({
-      scale: 1,
-      rotation: 0,
-      offsetX: 0,
-      offsetY: 0,
-      opacity: 0.5
-    });
-    setScaleDisplay('100%');
     setSavedPaintingTransform(null);
 
-    // Reset aspect ratio to match reference image
-    if (referenceImageData) {
+    // Reset aspect ratio to match reference image (normalized) and calculate initial scale
+    if (referenceImageData && paintingImageData) {
       const refImg = new Image();
-      refImg.onload = () => {
-        setProjectAspectWidth(refImg.width);
-        setProjectAspectHeight(refImg.height);
-      };
+      const paintImg = new Image();
+      let loadCount = 0;
+
+      function bothLoaded() {
+        loadCount++;
+        if (loadCount === 2) {
+          // Calculate GCD to get simplified ratio
+          const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+          const divisor = gcd(refImg.width, refImg.height);
+          const normalizedWidth = refImg.width / divisor;
+          const normalizedHeight = refImg.height / divisor;
+          
+          // If the ratio is still very large, normalize to base of 1
+          if (normalizedWidth > 100 || normalizedHeight > 100) {
+            setProjectAspectWidth(1);
+            setProjectAspectHeight(refImg.height / refImg.width);
+          } else {
+            setProjectAspectWidth(normalizedWidth);
+            setProjectAspectHeight(normalizedHeight);
+          }
+
+          // Calculate initial scale to normalize painting size to match reference
+          const scaleX = refImg.width / paintImg.width;
+          const scaleY = refImg.height / paintImg.height;
+          const initialScale = (scaleX + scaleY) / 2;
+          
+          setPaintingTransform({
+            scale: initialScale,
+            rotation: 0,
+            offsetX: 0,
+            offsetY: 0,
+            opacity: 0.5
+          });
+          setScaleDisplay(Math.round(initialScale * 100) + '%');
+        }
+      }
+
+      refImg.onload = bothLoaded;
+      paintImg.onload = bothLoaded;
       refImg.src = referenceImageData;
+      paintImg.src = paintingImageData;
     }
   };
 
@@ -239,11 +296,15 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
       const viewportHeight = window.innerHeight;
       const aspectRatio = refImg.width / refImg.height;
 
+      // Reserve space for controls at the bottom (approximately 100px)
+      const controlsHeight = 100;
+      const availableHeight = viewportHeight - controlsHeight;
+
       let displayWidth = viewportWidth * 0.95;
       let displayHeight = displayWidth / aspectRatio;
 
-      if (displayHeight > viewportHeight * 0.9) {
-        displayHeight = viewportHeight * 0.9;
+      if (displayHeight > availableHeight * 0.9) {
+        displayHeight = availableHeight * 0.9;
         displayWidth = displayHeight * aspectRatio;
       }
 
@@ -256,7 +317,18 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
   }, [referenceImageData]);
 
   return (
-    <>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden'
+    }}>
       <canvas
         ref={canvasRef}
         style={{
@@ -266,7 +338,8 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
           userSelect: 'none',
-          touchAction: 'none'
+          touchAction: 'none',
+          display: 'block'
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -287,10 +360,13 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
           left: '50%',
           transform: 'translateX(-50%)',
           background: 'rgba(0,0,0,0.9)',
-          padding: '0.4rem 0.6rem',
+          padding: '0.6rem 0.8rem',
           borderRadius: '6px',
-          zIndex: 10,
-          maxWidth: '90vw'
+          zIndex: 1000,
+          maxWidth: '95vw',
+          pointerEvents: 'auto',
+          maxHeight: '40vh',
+          overflowY: 'auto'
         }}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
@@ -298,15 +374,16 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
         onMouseDown={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Canvas</label>
             <input
               type="number"
-              min="1"
-              max="10000"
+              min="0.01"
+              max="1000"
+              step="0.01"
               value={projectAspectWidth}
-              onChange={(e) => setProjectAspectWidth(parseInt(e.target.value) || 1)}
+              onChange={(e) => setProjectAspectWidth(parseFloat(e.target.value) || 1)}
               style={{
                 width: '60px',
                 padding: '0.25rem',
@@ -316,13 +393,14 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
                 borderRadius: '3px'
               }}
             />
-            <span style={{ color: 'white', fontSize: '0.7rem' }}>×</span>
+            <span style={{ color: 'white', fontSize: '0.7rem' }}>:</span>
             <input
               type="number"
-              min="1"
-              max="10000"
+              min="0.01"
+              max="1000"
+              step="0.01"
               value={projectAspectHeight}
-              onChange={(e) => setProjectAspectHeight(parseInt(e.target.value) || 1)}
+              onChange={(e) => setProjectAspectHeight(parseFloat(e.target.value) || 1)}
               style={{
                 width: '60px',
                 padding: '0.25rem',
@@ -397,6 +475,6 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

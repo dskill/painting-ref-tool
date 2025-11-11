@@ -330,6 +330,8 @@ export class CameraViewer {
       const points = this.detectedPoints || this.scanner.detect(captureCanvas, this.scanOptions);
 
       // Calculate output dimensions based on project aspect ratio
+      // The aspect ratio is stored as a normalized fraction (e.g., 1:1.25, 16:9, etc.)
+      // We use the detected width as the base and calculate height from the aspect ratio
       let croppedCanvas: HTMLCanvasElement;
       if (this.projectAspectWidth && this.projectAspectHeight) {
         const aspectRatio = this.projectAspectWidth / this.projectAspectHeight;

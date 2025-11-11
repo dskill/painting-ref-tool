@@ -50,8 +50,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [paintingImageData, setPaintingImageData] = useState<string | null>(null);
   const [alignmentMode, setAlignmentMode] = useState(false);
   const [enableCanny, setEnableCanny] = useState(true);
-  const [projectAspectWidth, setProjectAspectWidth] = useState(1920);
-  const [projectAspectHeight, setProjectAspectHeight] = useState(1080);
+  const [projectAspectWidth, setProjectAspectWidth] = useState(1);
+  const [projectAspectHeight, setProjectAspectHeight] = useState(1);
   const [paintingTransform, setPaintingTransform] = useState<PaintingTransform>({
     scale: 1,
     rotation: 0,

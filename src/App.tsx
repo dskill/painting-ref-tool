@@ -49,6 +49,8 @@ export function App() {
     const points = documentScanner.detect(img, options);
 
     // Calculate output dimensions based on project aspect ratio
+    // The aspect ratio is stored as a normalized fraction (e.g., 1:1.25, 16:9, etc.)
+    // We use the detected width as the base and calculate height from the aspect ratio
     const aspectRatio = projectAspectWidth / projectAspectHeight;
     const detectedWidth = Math.max(
       documentScanner.distance(points[0], points[1]),
@@ -91,9 +93,21 @@ export function App() {
       img.onload = () => {
         setReferenceImageData(result);
         setHasReference(true);
-        // Initialize project aspect ratio to match reference image
-        setProjectAspectWidth(img.width);
-        setProjectAspectHeight(img.height);
+        // Initialize project aspect ratio to match reference image (normalized)
+        // Calculate GCD to get simplified ratio
+        const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+        const divisor = gcd(img.width, img.height);
+        const normalizedWidth = img.width / divisor;
+        const normalizedHeight = img.height / divisor;
+        
+        // If the ratio is still very large, normalize to base of 1
+        if (normalizedWidth > 100 || normalizedHeight > 100) {
+          setProjectAspectWidth(1);
+          setProjectAspectHeight(img.height / img.width);
+        } else {
+          setProjectAspectWidth(normalizedWidth);
+          setProjectAspectHeight(normalizedHeight);
+        }
       };
       img.src = result;
     };
