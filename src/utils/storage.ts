@@ -7,7 +7,7 @@ const DB_NAME = 'PaintingRefToolDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'appState';
 const STATE_KEY = 'currentSession';
-const JPEG_QUALITY = 0.85;
+const JPEG_QUALITY = 0.95;
 
 export interface SavedPaintingTransform {
   scale: number;

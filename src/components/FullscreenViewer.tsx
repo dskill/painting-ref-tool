@@ -200,7 +200,11 @@ export function FullscreenViewer({
             WebkitTouchCallout: 'none',
             WebkitUserSelect: 'none',
             userSelect: 'none',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            imageRendering: 'high-quality',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden',
+            transform: 'translateZ(0)'
           }}
         />
       )}
