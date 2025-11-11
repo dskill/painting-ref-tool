@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Toolbar } from './Toolbar';
 import { AlignmentMode } from './AlignmentMode';
+import { clearAppState } from '../utils/storage';
 
 interface FullscreenViewerProps {
   onUploadReference: (file: File) => void;
@@ -120,17 +121,24 @@ export function FullscreenViewer({
     }
   };
 
-  const handleAlign = () => {
+  const handleSettings = () => {
     setAlignmentMode(true);
   };
 
-  const handleDoneAlign = () => {
+  const handleDoneSettings = () => {
     setAlignmentMode(false);
   };
 
-  const handleClearAll = () => {
-    // Reload the page to reset everything
-    window.location.reload();
+  const handleClearAll = async () => {
+    if (confirm('Clear all saved data and reload? This will remove reference image, art image, and all settings.')) {
+      try {
+        await clearAppState();
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to clear data:', error);
+        alert('Failed to clear data. Try refreshing the page.');
+      }
+    }
   };
 
   // Determine what image to show
@@ -197,15 +205,14 @@ export function FullscreenViewer({
         />
       )}
 
-      {/* Alignment mode */}
-      {alignmentMode && <AlignmentMode onDone={handleDoneAlign} />}
+      {/* Settings mode */}
+      {alignmentMode && <AlignmentMode onDone={handleDoneSettings} onClearAll={handleClearAll} />}
 
       {/* Toolbar */}
       <Toolbar
         onUploadReference={onUploadReference}
         onLiveMode={onLiveMode}
-        onAlign={handleAlign}
-        onClearAll={handleClearAll}
+        onSettings={handleSettings}
         isReady={isReady}
       />
     </div>

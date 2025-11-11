@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 
-export function AlignmentMode({ onDone }: { onDone: () => void }) {
+export function AlignmentMode({ onDone, onClearAll }: { onDone: () => void; onClearAll: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const {
     referenceImageData,
@@ -456,7 +456,7 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
             <span style={{ color: 'white', fontSize: '0.65rem', minWidth: '35px' }}>{Math.round(paintingTransform.opacity * 100)}%</span>
           </div>
 
-          {/* Row 3: Reset and Done buttons */}
+          {/* Row 3: Reset, Save, and Clear All buttons */}
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
             <button
               onClick={handleReset}
@@ -485,7 +485,22 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
                 cursor: 'pointer'
               }}
             >
-              Done
+              Save
+            </button>
+
+            <button
+              onClick={onClearAll}
+              style={{
+                background: 'rgba(139,0,0,0.8)',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                cursor: 'pointer'
+              }}
+            >
+              Clear All
             </button>
           </div>
         </div>

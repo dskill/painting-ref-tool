@@ -1,19 +1,16 @@
 import React, { useRef } from 'react';
-import { clearAppState } from '../utils/storage';
 
 interface ToolbarProps {
   onUploadReference: (file: File) => void;
   onLiveMode: () => void;
-  onAlign: () => void;
-  onClearAll: () => void;
+  onSettings: () => void;
   isReady: boolean;
 }
 
 export function Toolbar({
   onUploadReference,
   onLiveMode,
-  onAlign,
-  onClearAll,
+  onSettings,
   isReady
 }: ToolbarProps) {
   const referenceFileRef = useRef<HTMLInputElement>(null);
@@ -28,18 +25,6 @@ export function Toolbar({
       onUploadReference(file);
       // Reset the input so the same file can be selected again
       e.target.value = '';
-    }
-  };
-
-  const handleClearAll = async () => {
-    if (confirm('Clear all saved data and reload? This will remove reference image, art image, and all settings.')) {
-      try {
-        await clearAppState();
-        onClearAll();
-      } catch (error) {
-        console.error('Failed to clear data:', error);
-        alert('Failed to clear data. Try refreshing the page.');
-      }
     }
   };
 
@@ -106,7 +91,7 @@ export function Toolbar({
       </button>
 
       <button
-        onClick={onAlign}
+        onClick={onSettings}
         style={{
           background: 'rgba(0,0,0,0.4)',
           color: 'white',
@@ -117,22 +102,7 @@ export function Toolbar({
           cursor: 'pointer'
         }}
       >
-        Align
-      </button>
-
-      <button
-        onClick={handleClearAll}
-        style={{
-          background: 'rgba(139,0,0,0.6)',
-          color: 'white',
-          border: '1px solid rgba(255,255,255,0.6)',
-          padding: '0.5rem 1rem',
-          borderRadius: '4px',
-          fontSize: '1.06rem',
-          cursor: 'pointer'
-        }}
-      >
-        Clear
+        Settings
       </button>
     </div>
   );
