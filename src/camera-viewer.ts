@@ -331,19 +331,31 @@ export class CameraViewer {
 
       // Calculate output dimensions based on project aspect ratio
       // The aspect ratio is stored as a normalized fraction (e.g., 1:1.25, 16:9, etc.)
-      // We use the detected width as the base and calculate height from the aspect ratio
+      // Use a high resolution output (2400px width as base) for quality
       let croppedCanvas: HTMLCanvasElement;
       if (this.projectAspectWidth && this.projectAspectHeight) {
         const aspectRatio = this.projectAspectWidth / this.projectAspectHeight;
+        // Use high resolution output (2400px width minimum, or detected width if larger)
         const detectedWidth = Math.max(
           this.scanner.distance(points[0], points[1]),
           this.scanner.distance(points[2], points[3])
         );
-        const outputWidth = Math.round(detectedWidth);
+        const outputWidth = Math.max(2400, Math.round(detectedWidth));
         const outputHeight = Math.round(outputWidth / aspectRatio);
         croppedCanvas = this.scanner.crop(captureCanvas, points, outputWidth, outputHeight);
       } else {
-        croppedCanvas = this.scanner.crop(captureCanvas, points);
+        // Default: use detected width with minimum 2400px
+        const detectedWidth = Math.max(
+          this.scanner.distance(points[0], points[1]),
+          this.scanner.distance(points[2], points[3])
+        );
+        const detectedHeight = Math.max(
+          this.scanner.distance(points[0], points[3]),
+          this.scanner.distance(points[1], points[2])
+        );
+        const outputWidth = Math.max(2400, Math.round(detectedWidth));
+        const outputHeight = Math.max(2400, Math.round(detectedHeight));
+        croppedCanvas = this.scanner.crop(captureCanvas, points, outputWidth, outputHeight);
       }
 
       // Stop camera

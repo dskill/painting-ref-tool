@@ -66,20 +66,35 @@ export function App() {
     setHasPainting(true);
 
     // Restore saved transform if it exists
-    if (savedPaintingTransform) {
+    // The saved transform needs to be adjusted for the new painting's dimensions
+    if (savedPaintingTransform && referenceImageData) {
       const refImg = new Image();
-      refImg.onload = () => {
-        setPaintingTransform({
-          scale: savedPaintingTransform.scale,
-          rotation: savedPaintingTransform.rotation,
-          offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
-          offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
-          opacity: paintingTransform.opacity
-        });
-      };
-      if (img.src) {
-        refImg.src = img.src;
+      const paintImg = new Image();
+      let loadCount = 0;
+
+      function bothLoaded() {
+        loadCount++;
+        if (loadCount === 2) {
+          // Recalculate scale based on new painting dimensions
+          const scaleX = refImg.width / paintImg.width;
+          const scaleY = refImg.height / paintImg.height;
+          const initialScale = (scaleX + scaleY) / 2;
+          
+          // Apply saved rotation and offsets (offsets are ratios relative to reference)
+          setPaintingTransform({
+            scale: initialScale,
+            rotation: savedPaintingTransform.rotation,
+            offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
+            offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
+            opacity: paintingTransform.opacity
+          });
+        }
       }
+
+      refImg.onload = bothLoaded;
+      paintImg.onload = bothLoaded;
+      refImg.src = referenceImageData;
+      paintImg.src = dataURL;
     }
   };
 
@@ -141,18 +156,35 @@ export function App() {
           setShowCaptureViewer(false);
 
           // Restore saved transform if it exists
-          if (savedPaintingTransform) {
+          // The saved transform needs to be adjusted for the new painting's dimensions
+          if (savedPaintingTransform && referenceImageData) {
             const refImg = new Image();
-            refImg.onload = () => {
-              setPaintingTransform({
-                scale: savedPaintingTransform.scale,
-                rotation: savedPaintingTransform.rotation,
-                offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
-                offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
-                opacity: paintingTransform.opacity
-              });
-            };
-            refImg.src = dataURL;
+            const newPaintImg = new Image();
+            let loadCount = 0;
+
+            function bothLoaded() {
+              loadCount++;
+              if (loadCount === 2) {
+                // Recalculate scale based on new painting dimensions
+                const scaleX = refImg.width / newPaintImg.width;
+                const scaleY = refImg.height / newPaintImg.height;
+                const initialScale = (scaleX + scaleY) / 2;
+                
+                // Apply saved rotation and offsets (offsets are ratios relative to reference)
+                setPaintingTransform({
+                  scale: initialScale,
+                  rotation: savedPaintingTransform.rotation,
+                  offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
+                  offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
+                  opacity: paintingTransform.opacity
+                });
+              }
+            }
+
+            refImg.onload = bothLoaded;
+            newPaintImg.onload = bothLoaded;
+            refImg.src = referenceImageData;
+            newPaintImg.src = dataURL;
           }
         }
       });

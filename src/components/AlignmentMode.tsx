@@ -125,6 +125,17 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
     renderAlignmentView();
   }, [paintingTransform, referenceImageData, paintingImageData]);
 
+  // Add keyboard shortcut: Escape to exit alignment mode
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onDone();
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [onDone]);
+
   // Calculate canvas scale factor
   const getCanvasScale = () => {
     const canvas = canvasRef.current;
@@ -286,7 +297,9 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
     onDone();
   };
 
-  // Calculate canvas display size
+  // Calculate canvas display size based on reference image dimensions (not project aspect ratio)
+  // The canvas always shows the reference image at its native aspect ratio
+  // The project aspect ratio affects how captured images are cropped, not the display
   useEffect(() => {
     if (!referenceImageData || !canvasRef.current) return;
 
@@ -294,18 +307,19 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
     refImg.onload = () => {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const aspectRatio = refImg.width / refImg.height;
+      // Use reference image's native aspect ratio for display
+      const displayAspectRatio = refImg.width / refImg.height;
 
-      // Reserve space for controls at the bottom (approximately 100px)
-      const controlsHeight = 100;
+      // Reserve space for controls at the bottom (approximately 120px to account for wrapping)
+      const controlsHeight = 120;
       const availableHeight = viewportHeight - controlsHeight;
 
       let displayWidth = viewportWidth * 0.95;
-      let displayHeight = displayWidth / aspectRatio;
+      let displayHeight = displayWidth / displayAspectRatio;
 
-      if (displayHeight > availableHeight * 0.9) {
-        displayHeight = availableHeight * 0.9;
-        displayWidth = displayHeight * aspectRatio;
+      if (displayHeight > availableHeight * 0.85) {
+        displayHeight = availableHeight * 0.85;
+        displayWidth = displayHeight * displayAspectRatio;
       }
 
       if (canvasRef.current) {
@@ -383,7 +397,15 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
               max="1000"
               step="0.01"
               value={projectAspectWidth}
-              onChange={(e) => setProjectAspectWidth(parseFloat(e.target.value) || 1)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || val === '0' || val === '0.') {
+                  setProjectAspectWidth(0.01);
+                } else {
+                  setProjectAspectWidth(parseFloat(val) || 0.01);
+                }
+              }}
+              onFocus={(e) => e.target.select()}
               style={{
                 width: '60px',
                 padding: '0.25rem',
@@ -400,7 +422,15 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
               max="1000"
               step="0.01"
               value={projectAspectHeight}
-              onChange={(e) => setProjectAspectHeight(parseFloat(e.target.value) || 1)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || val === '0' || val === '0.') {
+                  setProjectAspectHeight(0.01);
+                } else {
+                  setProjectAspectHeight(parseFloat(val) || 0.01);
+                }
+              }}
+              onFocus={(e) => e.target.select()}
               style={{
                 width: '60px',
                 padding: '0.25rem',

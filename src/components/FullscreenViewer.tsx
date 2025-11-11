@@ -128,6 +128,11 @@ export function FullscreenViewer({
     setAlignmentMode(false);
   };
 
+  const handleClearAll = () => {
+    // Reload the page to reset everything
+    window.location.reload();
+  };
+
   // Determine what image to show
   const getImageSrc = () => {
     if (showingPainting && paintingImageData) {
@@ -200,6 +205,7 @@ export function FullscreenViewer({
         onUploadReference={onUploadReference}
         onLiveMode={onLiveMode}
         onAlign={handleAlign}
+        onClearAll={handleClearAll}
         isReady={isReady}
       />
     </div>
