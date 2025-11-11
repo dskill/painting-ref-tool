@@ -261,7 +261,7 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
           
           setPaintingTransform({
             scale: initialScale,
-            rotation: 0,
+            rotation: paintingTransform.rotation, // Keep rotation unchanged
             offsetX: 0,
             offsetY: 0,
             opacity: 0.5
@@ -371,13 +371,11 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
         style={{
           position: 'absolute',
           bottom: '10px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          left: '0',
+          right: '0',
           background: 'rgba(0,0,0,0.9)',
           padding: '0.6rem 0.8rem',
-          borderRadius: '6px',
           zIndex: 1000,
-          maxWidth: '95vw',
           pointerEvents: 'auto',
           maxHeight: '40vh',
           overflowY: 'auto'
@@ -388,9 +386,10 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
         onMouseDown={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Canvas</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+          {/* Row 1: Aspect ratio inputs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
+            <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Aspect</label>
             <input
               type="number"
               min="0.01"
@@ -409,7 +408,7 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
               style={{
                 width: '60px',
                 padding: '0.25rem',
-                fontSize: '0.7rem',
+                fontSize: '16px',
                 background: 'rgba(255,255,255,0.9)',
                 border: '1px solid #ccc',
                 borderRadius: '3px'
@@ -434,7 +433,7 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
               style={{
                 width: '60px',
                 padding: '0.25rem',
-                fontSize: '0.7rem',
+                fontSize: '16px',
                 background: 'rgba(255,255,255,0.9)',
                 border: '1px solid #ccc',
                 borderRadius: '3px'
@@ -442,21 +441,8 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: '120px' }}>
-            <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Rotate</label>
-            <input
-              type="range"
-              min="-180"
-              max="180"
-              step="1"
-              value={paintingTransform.rotation}
-              onChange={(e) => setPaintingTransform({ ...paintingTransform, rotation: parseInt(e.target.value) })}
-              style={{ flex: 1 }}
-            />
-            <span style={{ color: 'white', fontSize: '0.65rem', minWidth: '30px' }}>{paintingTransform.rotation}°</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: '120px' }}>
+          {/* Row 2: Opacity slider - full width */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%' }}>
             <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Opacity</label>
             <input
               type="range"
@@ -467,42 +453,41 @@ export function AlignmentMode({ onDone }: { onDone: () => void }) {
               onChange={(e) => setPaintingTransform({ ...paintingTransform, opacity: parseFloat(e.target.value) })}
               style={{ flex: 1 }}
             />
-            <span style={{ color: 'white', fontSize: '0.65rem', minWidth: '30px' }}>{Math.round(paintingTransform.opacity * 100)}%</span>
+            <span style={{ color: 'white', fontSize: '0.65rem', minWidth: '35px' }}>{Math.round(paintingTransform.opacity * 100)}%</span>
           </div>
 
-          <div style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-            Scale: {scaleDisplay}
+          {/* Row 3: Reset and Done buttons */}
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+            <button
+              onClick={handleReset}
+              style={{
+                background: 'rgba(255,255,255,0.9)',
+                color: '#333',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                cursor: 'pointer'
+              }}
+            >
+              Reset
+            </button>
+
+            <button
+              onClick={handleDone}
+              style={{
+                background: 'rgba(76,175,80,0.9)',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                cursor: 'pointer'
+              }}
+            >
+              Done
+            </button>
           </div>
-
-          <button
-            onClick={handleReset}
-            style={{
-              background: 'rgba(255,255,255,0.9)',
-              color: '#333',
-              border: 'none',
-              padding: '0.25rem 0.5rem',
-              borderRadius: '4px',
-              fontSize: '0.7rem',
-              cursor: 'pointer'
-            }}
-          >
-            Reset
-          </button>
-
-          <button
-            onClick={handleDone}
-            style={{
-              background: 'rgba(76,175,80,0.9)',
-              color: 'white',
-              border: 'none',
-              padding: '0.25rem 0.5rem',
-              borderRadius: '4px',
-              fontSize: '0.7rem',
-              cursor: 'pointer'
-            }}
-          >
-            Done
-          </button>
         </div>
       </div>
     </div>

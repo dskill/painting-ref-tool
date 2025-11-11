@@ -78,9 +78,9 @@ export function Toolbar({
           background: 'rgba(0,0,0,0.4)',
           color: 'white',
           border: '1px solid rgba(255,255,255,0.6)',
-          padding: '0.625rem 1.25rem',
+          padding: '0.5rem 1rem',
           borderRadius: '4px',
-          fontSize: '1.125rem',
+          fontSize: '1.06rem',
           cursor: isReady ? 'pointer' : 'not-allowed',
           opacity: isReady ? 1 : 0.5
         }}
@@ -95,14 +95,14 @@ export function Toolbar({
           background: 'rgba(0,0,0,0.4)',
           color: 'white',
           border: '1px solid rgba(255,255,255,0.6)',
-          padding: '0.625rem 1.25rem',
+          padding: '0.5rem 1rem',
           borderRadius: '4px',
-          fontSize: '1.125rem',
+          fontSize: '1.06rem',
           cursor: isReady ? 'pointer' : 'not-allowed',
           opacity: isReady ? 1 : 0.5
         }}
       >
-        Art
+        Canvas
       </button>
 
       <button
@@ -111,9 +111,9 @@ export function Toolbar({
           background: 'rgba(0,0,0,0.4)',
           color: 'white',
           border: '1px solid rgba(255,255,255,0.6)',
-          padding: '0.625rem 1.25rem',
+          padding: '0.5rem 1rem',
           borderRadius: '4px',
-          fontSize: '1.125rem',
+          fontSize: '1.06rem',
           cursor: 'pointer'
         }}
       >
@@ -126,9 +126,9 @@ export function Toolbar({
           background: 'rgba(139,0,0,0.6)',
           color: 'white',
           border: '1px solid rgba(255,255,255,0.6)',
-          padding: '0.625rem 1.25rem',
+          padding: '0.5rem 1rem',
           borderRadius: '4px',
-          fontSize: '1.125rem',
+          fontSize: '1.06rem',
           cursor: 'pointer'
         }}
       >

@@ -1,12 +1,20 @@
 import { DocumentScanner, Point } from './document-scanner';
 
+export interface CapturedImageData {
+  originalCanvas: HTMLCanvasElement;  // Full resolution uncropped image
+  cornerPoints: Point[];               // Detected corner points
+}
+
 export interface CameraViewerOptions {
   container: HTMLElement;
   detectionInterval?: number; // ms between detection runs (default: 60ms for ~17fps)
   scanOptions?: { useCanny?: boolean };
+  flashEnabled?: boolean;
   projectAspectWidth?: number;
   projectAspectHeight?: number;
-  onCaptured?: (croppedCanvas: HTMLCanvasElement) => void;
+  onCaptured?: (data: CapturedImageData) => void;
+  onEdgeModeToggle?: (useCanny: boolean) => void;
+  onFlashToggle?: (flashEnabled: boolean) => void;
 }
 
 export class CameraViewer {
@@ -20,7 +28,9 @@ export class CameraViewer {
   private scanOptions: { useCanny?: boolean };
   private projectAspectWidth?: number;
   private projectAspectHeight?: number;
-  private onCaptured?: (croppedCanvas: HTMLCanvasElement) => void;
+  private onCaptured?: (data: CapturedImageData) => void;
+  private onEdgeModeToggle?: (useCanny: boolean) => void;
+  private onFlashToggle?: (flashEnabled: boolean) => void;
 
   private detectedPoints: Point[] | null = null;
   private detectionTimer: number | null = null;
@@ -37,9 +47,12 @@ export class CameraViewer {
     this.container = options.container;
     this.detectionInterval = options.detectionInterval || 60; // ~17fps default
     this.scanOptions = options.scanOptions || { useCanny: true };
+    this.flashEnabled = options.flashEnabled ?? false;
     this.projectAspectWidth = options.projectAspectWidth;
     this.projectAspectHeight = options.projectAspectHeight;
     this.onCaptured = options.onCaptured;
+    this.onEdgeModeToggle = options.onEdgeModeToggle;
+    this.onFlashToggle = options.onFlashToggle;
     this.scanner = new DocumentScanner();
 
     // Create video element (hidden)
@@ -160,6 +173,10 @@ export class CameraViewer {
   private toggleEdgeMode(): void {
     this.scanOptions.useCanny = !this.scanOptions.useCanny;
     this.edgeModeButton.textContent = this.scanOptions.useCanny ? 'Edge' : 'Fill';
+    // Notify parent so the setting persists
+    if (this.onEdgeModeToggle) {
+      this.onEdgeModeToggle(this.scanOptions.useCanny);
+    }
   }
 
   async start(): Promise<void> {
@@ -306,6 +323,11 @@ export class CameraViewer {
       // Update button styling to show flash state
       this.flashButton.style.background = this.flashEnabled ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.4)';
       this.flashButton.style.color = this.flashEnabled ? '#333' : 'white';
+
+      // Notify parent so the setting persists
+      if (this.onFlashToggle) {
+        this.onFlashToggle(this.flashEnabled);
+      }
     } catch (error) {
       console.error('Failed to toggle flash:', error);
       alert('Failed to toggle flash');
@@ -318,7 +340,7 @@ export class CameraViewer {
     this.isCapturing = true;
 
     try {
-      // Create canvas with current video frame
+      // Create canvas with current video frame (full resolution, uncropped)
       const captureCanvas = document.createElement('canvas');
       captureCanvas.width = this.video.videoWidth;
       captureCanvas.height = this.video.videoHeight;
@@ -326,44 +348,42 @@ export class CameraViewer {
       const captureCtx = captureCanvas.getContext('2d')!;
       captureCtx.drawImage(this.video, 0, 0);
 
-      // Crop using detected points (or detect now if not available)
-      const points = this.detectedPoints || this.scanner.detect(captureCanvas, this.scanOptions);
-
-      // Calculate output dimensions based on project aspect ratio
-      // The aspect ratio is stored as a normalized fraction (e.g., 1:1.25, 16:9, etc.)
-      // Use a high resolution output (2400px width as base) for quality
-      let croppedCanvas: HTMLCanvasElement;
-      if (this.projectAspectWidth && this.projectAspectHeight) {
-        const aspectRatio = this.projectAspectWidth / this.projectAspectHeight;
-        // Use high resolution output (2400px width minimum, or detected width if larger)
-        const detectedWidth = Math.max(
-          this.scanner.distance(points[0], points[1]),
-          this.scanner.distance(points[2], points[3])
-        );
-        const outputWidth = Math.max(2400, Math.round(detectedWidth));
-        const outputHeight = Math.round(outputWidth / aspectRatio);
-        croppedCanvas = this.scanner.crop(captureCanvas, points, outputWidth, outputHeight);
+      // Detect corner points - use already detected points if available
+      // Otherwise, downscale for detection (same as preview) to avoid hanging on high-res images
+      let points: Point[];
+      if (this.detectedPoints) {
+        points = this.detectedPoints;
       } else {
-        // Default: use detected width with minimum 2400px
-        const detectedWidth = Math.max(
-          this.scanner.distance(points[0], points[1]),
-          this.scanner.distance(points[2], points[3])
-        );
-        const detectedHeight = Math.max(
-          this.scanner.distance(points[0], points[3]),
-          this.scanner.distance(points[1], points[2])
-        );
-        const outputWidth = Math.max(2400, Math.round(detectedWidth));
-        const outputHeight = Math.max(2400, Math.round(detectedHeight));
-        croppedCanvas = this.scanner.crop(captureCanvas, points, outputWidth, outputHeight);
+        // Downscale for detection performance
+        const maxDimension = 720;
+        const scale = Math.min(1, maxDimension / Math.max(this.video.videoWidth, this.video.videoHeight));
+        
+        const detectionCanvas = document.createElement('canvas');
+        detectionCanvas.width = this.video.videoWidth * scale;
+        detectionCanvas.height = this.video.videoHeight * scale;
+        
+        const detectionCtx = detectionCanvas.getContext('2d')!;
+        detectionCtx.drawImage(this.video, 0, 0, detectionCanvas.width, detectionCanvas.height);
+        
+        const detectedPoints = this.scanner.detect(detectionCanvas, this.scanOptions);
+        
+        // Scale points back to original resolution
+        points = detectedPoints.map(p => ({
+          x: p.x / scale,
+          y: p.y / scale
+        }));
       }
 
       // Stop camera
       this.stop();
 
-      // Callback with cropped result
+      // Callback with original canvas and corner points
+      // The cropping will be done later based on current aspect ratio settings
       if (this.onCaptured) {
-        this.onCaptured(croppedCanvas);
+        this.onCaptured({
+          originalCanvas: captureCanvas,
+          cornerPoints: points
+        });
       }
     } catch (error) {
       console.error('Capture error:', error);

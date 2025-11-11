@@ -16,12 +16,24 @@ export interface SavedPaintingTransform {
   offsetYRatio: number;
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface CapturedPaintingData {
+  originalImageData: string;
+  cornerPoints: Point[];
+}
+
 interface PersistedState {
   version: number;
   referenceImage: Blob | null;
   paintingImage: Blob | null;
   savedPaintingTransform: SavedPaintingTransform | null;
+  capturedPaintingData: CapturedPaintingData | null;
   enableCanny: boolean;
+  flashEnabled: boolean;
   projectAspectWidth: number;
   projectAspectHeight: number;
   lastUpdated: string;
@@ -104,7 +116,9 @@ export async function saveAppState(
   referenceImageData: string | null,
   paintingImageData: string | null,
   savedPaintingTransform: SavedPaintingTransform | null,
+  capturedPaintingData: CapturedPaintingData | null,
   enableCanny: boolean,
+  flashEnabled: boolean,
   projectAspectWidth: number,
   projectAspectHeight: number
 ): Promise<void> {
@@ -124,7 +138,9 @@ export async function saveAppState(
       referenceImage: referenceBlob,
       paintingImage: paintingBlob,
       savedPaintingTransform,
+      capturedPaintingData,
       enableCanny,
+      flashEnabled,
       projectAspectWidth,
       projectAspectHeight,
       lastUpdated: new Date().toISOString(),
@@ -151,7 +167,9 @@ export async function loadAppState(): Promise<{
   referenceImageData: string | null;
   paintingImageData: string | null;
   savedPaintingTransform: SavedPaintingTransform | null;
+  capturedPaintingData: CapturedPaintingData | null;
   enableCanny: boolean;
+  flashEnabled: boolean;
   projectAspectWidth: number;
   projectAspectHeight: number;
 } | null> {
@@ -183,9 +201,11 @@ export async function loadAppState(): Promise<{
       referenceImageData,
       paintingImageData,
       savedPaintingTransform: state.savedPaintingTransform,
+      capturedPaintingData: state.capturedPaintingData || null,
       enableCanny: state.enableCanny,
-      projectAspectWidth: state.projectAspectWidth || 1920,
-      projectAspectHeight: state.projectAspectHeight || 1080,
+      flashEnabled: state.flashEnabled ?? false,
+      projectAspectWidth: state.projectAspectWidth || 1,
+      projectAspectHeight: state.projectAspectHeight || 1,
     };
   } catch (error) {
     console.error('Failed to load app state:', error);

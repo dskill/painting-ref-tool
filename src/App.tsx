@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useOpenCV } from './hooks/useOpenCV';
 import { useAppContext } from './context/AppContext';
 import { FullscreenViewer } from './components/FullscreenViewer';
-import { CameraViewer } from './camera-viewer';
+import { CameraViewer, CapturedImageData } from './camera-viewer';
+import type { Point } from './context/AppContext';
 
 export function App() {
   const { isReady: opencvReady, documentScanner } = useOpenCV();
@@ -12,7 +13,13 @@ export function App() {
     setHasPainting,
     setReferenceImageData,
     setPaintingImageData,
+    capturedPaintingData,
+    setCapturedPaintingData,
+    referenceImageData,
     enableCanny,
+    setEnableCanny,
+    flashEnabled,
+    setFlashEnabled,
     savedPaintingTransform,
     paintingTransform,
     setPaintingTransform,
@@ -37,37 +44,98 @@ export function App() {
     };
   }, []);
 
-  // Process and crop painting image
-  const processAndCropImage = (img: HTMLImageElement) => {
-    if (!documentScanner) return;
+  // Process captured painting data: crop from original based on current aspect ratio
+  const processCapturedPainting = async (originalImageData: string, cornerPoints: Point[]): Promise<string> => {
+    if (!documentScanner) return originalImageData;
 
-    const options: any = {};
-    if (enableCanny) {
-      options.useCanny = true;
-    }
-
-    const points = documentScanner.detect(img, options);
-
+    // Wait for image to load
+    const tempImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = originalImageData;
+    });
+    
     // Calculate output dimensions based on project aspect ratio
-    // The aspect ratio is stored as a normalized fraction (e.g., 1:1.25, 16:9, etc.)
-    // We use the detected width as the base and calculate height from the aspect ratio
+    // Use high resolution (2400px minimum width) for quality
     const aspectRatio = projectAspectWidth / projectAspectHeight;
     const detectedWidth = Math.max(
-      documentScanner.distance(points[0], points[1]),
-      documentScanner.distance(points[2], points[3])
+      documentScanner.distance(cornerPoints[0], cornerPoints[1]),
+      documentScanner.distance(cornerPoints[2], cornerPoints[3])
     );
-    const outputWidth = Math.round(detectedWidth);
+    const outputWidth = Math.max(2400, Math.round(detectedWidth));
     const outputHeight = Math.round(outputWidth / aspectRatio);
 
-    const canvas = documentScanner.crop(img, points, outputWidth, outputHeight);
-    const dataURL = canvas.toDataURL();
+    // Create temp canvas from loaded image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = tempImg.width;
+    tempCanvas.height = tempImg.height;
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.drawImage(tempImg, 0, 0);
 
-    setPaintingImageData(dataURL);
+    // Crop with current aspect ratio
+    const croppedCanvas = documentScanner.crop(tempCanvas, cornerPoints, outputWidth, outputHeight);
+    return croppedCanvas.toDataURL();
+  };
+
+  // When aspect ratio changes, reprocess the captured painting if it exists
+  useEffect(() => {
+    if (capturedPaintingData && documentScanner) {
+      (async () => {
+        const processed = await processCapturedPainting(
+          capturedPaintingData.originalImageData,
+          capturedPaintingData.cornerPoints
+        );
+        setPaintingImageData(processed);
+        
+        // Recalculate scale for new dimensions
+        if (savedPaintingTransform && referenceImageData) {
+          const refImg = new Image();
+          const paintImg = new Image();
+          let loadCount = 0;
+
+          function bothLoaded() {
+            loadCount++;
+            if (loadCount === 2) {
+              const scaleX = refImg.width / paintImg.width;
+              const scaleY = refImg.height / paintImg.height;
+              const initialScale = (scaleX + scaleY) / 2;
+              
+              setPaintingTransform({
+                scale: initialScale,
+                rotation: savedPaintingTransform.rotation,
+                offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
+                offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
+                opacity: paintingTransform.opacity
+              });
+            }
+          }
+
+          refImg.onload = bothLoaded;
+          paintImg.onload = bothLoaded;
+          refImg.src = referenceImageData;
+          paintImg.src = processed;
+        }
+      })();
+    }
+  }, [projectAspectWidth, projectAspectHeight]);
+
+  // Handle captured image from camera
+  const handleCapturedImage = async (data: CapturedImageData) => {
+    // Store the original uncropped image and corner points
+    const originalDataURL = data.originalCanvas.toDataURL();
+    setCapturedPaintingData({
+      originalImageData: originalDataURL,
+      cornerPoints: data.cornerPoints
+    });
+
+    // Process and crop based on current aspect ratio (async to avoid blocking)
+    const processed = await processCapturedPainting(originalDataURL, data.cornerPoints);
+    setPaintingImageData(processed);
     setHasPainting(true);
 
-    // Restore saved transform if it exists
-    // The saved transform needs to be adjusted for the new painting's dimensions
-    if (savedPaintingTransform && referenceImageData) {
+    // Calculate initial scale for alignment
+    if (referenceImageData) {
       const refImg = new Image();
       const paintImg = new Image();
       let loadCount = 0;
@@ -75,26 +143,36 @@ export function App() {
       function bothLoaded() {
         loadCount++;
         if (loadCount === 2) {
-          // Recalculate scale based on new painting dimensions
+          // Calculate scale to make painting same size as reference
           const scaleX = refImg.width / paintImg.width;
           const scaleY = refImg.height / paintImg.height;
           const initialScale = (scaleX + scaleY) / 2;
           
-          // Apply saved rotation and offsets (offsets are ratios relative to reference)
-          setPaintingTransform({
-            scale: initialScale,
-            rotation: savedPaintingTransform.rotation,
-            offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
-            offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
-            opacity: paintingTransform.opacity
-          });
+          // Apply saved transform if exists, otherwise start fresh
+          if (savedPaintingTransform) {
+            setPaintingTransform({
+              scale: initialScale,
+              rotation: savedPaintingTransform.rotation,
+              offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
+              offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
+              opacity: paintingTransform.opacity
+            });
+          } else {
+            setPaintingTransform({
+              scale: initialScale,
+              rotation: 0,
+              offsetX: 0,
+              offsetY: 0,
+              opacity: 0.5
+            });
+          }
         }
       }
 
       refImg.onload = bothLoaded;
       paintImg.onload = bothLoaded;
       refImg.src = referenceImageData;
-      paintImg.src = dataURL;
+      paintImg.src = processed;
     }
   };
 
@@ -147,45 +225,18 @@ export function App() {
         container: captureViewerRef.current,
         detectionInterval: 60, // ~17fps
         scanOptions: { useCanny: enableCanny },
+        flashEnabled,
         projectAspectWidth,
         projectAspectHeight,
-        onCaptured: (croppedCanvas) => {
-          const dataURL = croppedCanvas.toDataURL();
-          setPaintingImageData(dataURL);
-          setHasPainting(true);
+        onCaptured: async (data) => {
           setShowCaptureViewer(false);
-
-          // Restore saved transform if it exists
-          // The saved transform needs to be adjusted for the new painting's dimensions
-          if (savedPaintingTransform && referenceImageData) {
-            const refImg = new Image();
-            const newPaintImg = new Image();
-            let loadCount = 0;
-
-            function bothLoaded() {
-              loadCount++;
-              if (loadCount === 2) {
-                // Recalculate scale based on new painting dimensions
-                const scaleX = refImg.width / newPaintImg.width;
-                const scaleY = refImg.height / newPaintImg.height;
-                const initialScale = (scaleX + scaleY) / 2;
-                
-                // Apply saved rotation and offsets (offsets are ratios relative to reference)
-                setPaintingTransform({
-                  scale: initialScale,
-                  rotation: savedPaintingTransform.rotation,
-                  offsetX: savedPaintingTransform.offsetXRatio * refImg.width,
-                  offsetY: savedPaintingTransform.offsetYRatio * refImg.height,
-                  opacity: paintingTransform.opacity
-                });
-              }
-            }
-
-            refImg.onload = bothLoaded;
-            newPaintImg.onload = bothLoaded;
-            refImg.src = referenceImageData;
-            newPaintImg.src = dataURL;
-          }
+          await handleCapturedImage(data);
+        },
+        onEdgeModeToggle: (useCanny) => {
+          setEnableCanny(useCanny);
+        },
+        onFlashToggle: (enabled) => {
+          setFlashEnabled(enabled);
         }
       });
 

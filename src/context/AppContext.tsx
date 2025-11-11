@@ -16,6 +16,16 @@ export interface SavedPaintingTransform {
   offsetYRatio: number;
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface CapturedPaintingData {
+  originalImageData: string;  // Full resolution uncropped image
+  cornerPoints: Point[];       // Detected corner points for cropping
+}
+
 interface AppContextType {
   hasReference: boolean;
   setHasReference: (value: boolean) => void;
@@ -25,6 +35,8 @@ interface AppContextType {
   setReferenceImageData: (value: string | null) => void;
   paintingImageData: string | null;
   setPaintingImageData: (value: string | null) => void;
+  capturedPaintingData: CapturedPaintingData | null;
+  setCapturedPaintingData: (value: CapturedPaintingData | null) => void;
   alignmentMode: boolean;
   setAlignmentMode: (value: boolean) => void;
   paintingTransform: PaintingTransform;
@@ -33,6 +45,8 @@ interface AppContextType {
   setSavedPaintingTransform: (value: SavedPaintingTransform | null) => void;
   enableCanny: boolean;
   setEnableCanny: (value: boolean) => void;
+  flashEnabled: boolean;
+  setFlashEnabled: (value: boolean) => void;
   projectAspectWidth: number;
   setProjectAspectWidth: (value: number) => void;
   projectAspectHeight: number;
@@ -48,8 +62,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [hasPainting, setHasPainting] = useState(false);
   const [referenceImageData, setReferenceImageData] = useState<string | null>(null);
   const [paintingImageData, setPaintingImageData] = useState<string | null>(null);
+  const [capturedPaintingData, setCapturedPaintingData] = useState<CapturedPaintingData | null>(null);
   const [alignmentMode, setAlignmentMode] = useState(false);
   const [enableCanny, setEnableCanny] = useState(true);
+  const [flashEnabled, setFlashEnabled] = useState(false);
   const [projectAspectWidth, setProjectAspectWidth] = useState(1);
   const [projectAspectHeight, setProjectAspectHeight] = useState(1);
   const [paintingTransform, setPaintingTransform] = useState<PaintingTransform>({
@@ -83,7 +99,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (savedState.savedPaintingTransform) {
             setSavedPaintingTransform(savedState.savedPaintingTransform);
           }
+          if (savedState.capturedPaintingData) {
+            setCapturedPaintingData(savedState.capturedPaintingData);
+          }
           setEnableCanny(savedState.enableCanny);
+          setFlashEnabled(savedState.flashEnabled ?? false);
           setProjectAspectWidth(savedState.projectAspectWidth);
           setProjectAspectHeight(savedState.projectAspectHeight);
         }
@@ -108,7 +128,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           referenceImageData,
           paintingImageData,
           savedPaintingTransform,
+          capturedPaintingData,
           enableCanny,
+          flashEnabled,
           projectAspectWidth,
           projectAspectHeight
         );
@@ -122,7 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     save();
-  }, [referenceImageData, paintingImageData, savedPaintingTransform, enableCanny, projectAspectWidth, projectAspectHeight, isLoading]);
+  }, [referenceImageData, paintingImageData, savedPaintingTransform, capturedPaintingData, enableCanny, flashEnabled, projectAspectWidth, projectAspectHeight, isLoading]);
 
   return (
     <AppContext.Provider
@@ -135,6 +157,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setReferenceImageData,
         paintingImageData,
         setPaintingImageData,
+        capturedPaintingData,
+        setCapturedPaintingData,
         alignmentMode,
         setAlignmentMode,
         paintingTransform,
@@ -143,6 +167,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSavedPaintingTransform,
         enableCanny,
         setEnableCanny,
+        flashEnabled,
+        setFlashEnabled,
         projectAspectWidth,
         setProjectAspectWidth,
         projectAspectHeight,
