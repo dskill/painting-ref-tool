@@ -20,7 +20,9 @@ export function FullscreenViewer({
     paintingImageData,
     alignmentMode,
     setAlignmentMode,
-    savedPaintingTransform
+    savedPaintingTransform,
+    hasReference,
+    hasPainting
   } = useAppContext();
 
   const [showingPainting, setShowingPainting] = useState(false);
@@ -180,10 +182,41 @@ export function FullscreenViewer({
       onTouchEnd={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* No image text */}
+      {/* Instructions when no images */}
       {!showImage && !alignmentMode && (
-        <div style={{ color: '#666', fontSize: '1.5rem', pointerEvents: 'none' }}>
-          no image
+        <div style={{
+          color: '#999',
+          fontSize: '1.1rem',
+          pointerEvents: 'none',
+          maxWidth: '600px',
+          padding: '2rem',
+          textAlign: 'left',
+          lineHeight: '1.8'
+        }}>
+          <div style={{
+            fontSize: '1.4rem',
+            marginBottom: '1.5rem',
+            color: '#ccc',
+            fontWeight: '500'
+          }}>
+            Getting Started
+          </div>
+
+          <div style={{ marginBottom: '0.8rem', textDecoration: hasReference ? 'line-through' : 'none', opacity: hasReference ? 0.5 : 1 }}>
+            1. Add reference image
+          </div>
+
+          <div style={{ marginBottom: '0.8rem', textDecoration: hasPainting ? 'line-through' : 'none', opacity: hasPainting ? 0.5 : 1 }}>
+            2. Add canvas image
+          </div>
+
+          <div style={{ marginBottom: '0.8rem' }}>
+            3. Edit canvas via settings if needed
+          </div>
+
+          <div style={{ marginBottom: '0.8rem' }}>
+            4. Press screen to toggle between reference and canvas
+          </div>
         </div>
       )}
 
