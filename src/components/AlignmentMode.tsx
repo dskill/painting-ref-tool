@@ -13,7 +13,9 @@ export function AlignmentMode({ onDone, onClearAll }: { onDone: () => void; onCl
     projectAspectWidth,
     setProjectAspectWidth,
     projectAspectHeight,
-    setProjectAspectHeight
+    setProjectAspectHeight,
+    enableGrayscale,
+    setEnableGrayscale
   } = useAppContext();
 
   const [scaleDisplay, setScaleDisplay] = useState('100%');
@@ -353,7 +355,8 @@ export function AlignmentMode({ onDone, onClearAll }: { onDone: () => void; onCl
           WebkitUserSelect: 'none',
           userSelect: 'none',
           touchAction: 'none',
-          display: 'block'
+          display: 'block',
+          filter: enableGrayscale ? 'grayscale(1)' : 'none'
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -456,7 +459,22 @@ export function AlignmentMode({ onDone, onClearAll }: { onDone: () => void; onCl
             <span style={{ color: 'white', fontSize: '0.65rem', minWidth: '35px' }}>{Math.round(paintingTransform.opacity * 100)}%</span>
           </div>
 
-          {/* Row 3: Reset, Save, and Clear All buttons */}
+          {/* Row 3: Grayscale toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'center' }}>
+            <label style={{ color: 'white', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>Grayscale</label>
+            <input
+              type="checkbox"
+              checked={enableGrayscale}
+              onChange={(e) => setEnableGrayscale(e.target.checked)}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer'
+              }}
+            />
+          </div>
+
+          {/* Row 4: Reset, Save, and Clear All buttons */}
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
             <button
               onClick={handleReset}

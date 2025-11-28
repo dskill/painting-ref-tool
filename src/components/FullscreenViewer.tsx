@@ -20,7 +20,8 @@ export function FullscreenViewer({
     paintingImageData,
     alignmentMode,
     setAlignmentMode,
-    savedPaintingTransform
+    savedPaintingTransform,
+    enableGrayscale
   } = useAppContext();
 
   const [showingPainting, setShowingPainting] = useState(false);
@@ -204,7 +205,8 @@ export function FullscreenViewer({
             imageRendering: 'high-quality',
             WebkitBackfaceVisibility: 'hidden',
             backfaceVisibility: 'hidden',
-            transform: 'translateZ(0)'
+            transform: 'translateZ(0)',
+            filter: enableGrayscale ? 'grayscale(1)' : 'none'
           }}
         />
       )}

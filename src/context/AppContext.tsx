@@ -45,6 +45,8 @@ interface AppContextType {
   setSavedPaintingTransform: (value: SavedPaintingTransform | null) => void;
   enableCanny: boolean;
   setEnableCanny: (value: boolean) => void;
+  enableGrayscale: boolean;
+  setEnableGrayscale: (value: boolean) => void;
   projectAspectWidth: number;
   setProjectAspectWidth: (value: number) => void;
   projectAspectHeight: number;
@@ -63,6 +65,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [capturedPaintingData, setCapturedPaintingData] = useState<CapturedPaintingData | null>(null);
   const [alignmentMode, setAlignmentMode] = useState(false);
   const [enableCanny, setEnableCanny] = useState(true);
+  const [enableGrayscale, setEnableGrayscale] = useState(false);
   const [projectAspectWidth, setProjectAspectWidth] = useState(1);
   const [projectAspectHeight, setProjectAspectHeight] = useState(1);
   const [paintingTransform, setPaintingTransform] = useState<PaintingTransform>({
@@ -100,6 +103,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setCapturedPaintingData(savedState.capturedPaintingData);
           }
           setEnableCanny(savedState.enableCanny);
+          setEnableGrayscale(savedState.enableGrayscale ?? false);
           setProjectAspectWidth(savedState.projectAspectWidth);
           setProjectAspectHeight(savedState.projectAspectHeight);
         }
@@ -126,6 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           savedPaintingTransform,
           capturedPaintingData,
           enableCanny,
+          enableGrayscale,
           projectAspectWidth,
           projectAspectHeight
         );
@@ -139,7 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     save();
-  }, [referenceImageData, paintingImageData, savedPaintingTransform, capturedPaintingData, enableCanny, projectAspectWidth, projectAspectHeight, isLoading]);
+  }, [referenceImageData, paintingImageData, savedPaintingTransform, capturedPaintingData, enableCanny, enableGrayscale, projectAspectWidth, projectAspectHeight, isLoading]);
 
   return (
     <AppContext.Provider
@@ -162,6 +167,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSavedPaintingTransform,
         enableCanny,
         setEnableCanny,
+        enableGrayscale,
+        setEnableGrayscale,
         projectAspectWidth,
         setProjectAspectWidth,
         projectAspectHeight,
